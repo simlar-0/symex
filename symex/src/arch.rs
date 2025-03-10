@@ -7,12 +7,15 @@
 //! architecture specific hooks.
 
 pub mod arm;
+pub mod risc_v;
 /// Defines discovery behaviour for the architectures.
 pub mod discover;
 
 use std::fmt::{Debug, Display};
 
 use arm::{v6::ArmV6M, v7::ArmV7EM};
+use risc_v::RISCV;
+use object::File;
 use thiserror::Error;
 
 use crate::{
@@ -95,6 +98,7 @@ pub enum ParseError {
 pub enum SupportedArchitecture {
     Armv7EM(ArmV7EM),
     Armv6M(ArmV6M),
+    RISCV(RISCV),
 }
 
 /// A generic architecture

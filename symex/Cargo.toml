@@ -40,6 +40,8 @@ dyn-clone = "1.0.18"
 
 bitwuzla = {git = "https://github.com/ivajon/boolector-rs.git", branch = "bitwuzla"}
 
+risc-v-disassembler = { git = "https://github.com/simlar-0/RISC-V-disassembler.git", branch = "main" }
+
 [features]
 default=[]
 
