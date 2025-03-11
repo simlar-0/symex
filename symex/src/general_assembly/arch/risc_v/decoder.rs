@@ -1,4 +1,4 @@
-//#![allow(warnings)]
+#![allow(warnings)]
 
 use risc_v_disassembler::{
     ParsedInstruction32,
@@ -15,49 +15,68 @@ use super::RISCV;
 use crate::general_assembly::instruction::Instruction as GAInstruction;
 
 impl RISCV {
-    pub(super) fn expand(instr: ParsedInstruction32) -> GAInstruction<RISCV> {
-        match instr {
-            ParsedInstruction32::add { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::sub { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::xor { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::or { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::and { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::sll { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::srl { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::sra { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::slt { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::sltu { rd, rs1, rs2 } => {todo!();}
-            ParsedInstruction32::addi { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::xori { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::ori { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::andi { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::slli { rd, rs1, shamt } => {todo!();}
-            ParsedInstruction32::srli { rd, rs1, shamt } => {todo!();}
-            ParsedInstruction32::srai { rd, rs1, shamt } => {todo!();}
-            ParsedInstruction32::slti { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::sltiu { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::lb { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::lh { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::lw { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::lbu { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::lhu { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::sb { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::sh { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::sw { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::beq { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::bne { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::blt { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::bge { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::bltu { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::bgeu { rs1, rs2, imm } => {todo!();}
-            ParsedInstruction32::jal { rd, imm } => {todo!();}
-            ParsedInstruction32::jalr { rd, rs1, imm } => {todo!();}
-            ParsedInstruction32::lui { rd, imm } => {todo!();}
-            ParsedInstruction32::auipc { rd, imm } => {todo!();}
-            ParsedInstruction32::ecall => {todo!();}
-            ParsedInstruction32::ebreak => {todo!();}
+    pub(super) fn expand(instr: &ParsedInstruction32) -> GAInstruction<RISCV> {
+        let instruction_size: u32 = 32;
+        let max_cycle= todo!();
+        let memory_access: bool = todo!();
+
+        let operations = instruction_to_ga_operations(instr);
+
+        GAInstruction {
+            instruction_size,
+            max_cycle,
+            memory_access,
+            operations,
         }
     }
+}
+
+fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation> {
+    match *instr {
+        ParsedInstruction32::add { rd, rs1, rs2 } => {
+
+        }
+        ParsedInstruction32::sub { rd, rs1, rs2 } => {
+            
+        }
+        ParsedInstruction32::xor { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::or { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::and { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::sll { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::srl { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::sra { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::slt { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::sltu { rd, rs1, rs2 } => {todo!();}
+        ParsedInstruction32::addi { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::xori { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::ori { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::andi { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::slli { rd, rs1, shamt } => {todo!();}
+        ParsedInstruction32::srli { rd, rs1, shamt } => {todo!();}
+        ParsedInstruction32::srai { rd, rs1, shamt } => {todo!();}
+        ParsedInstruction32::slti { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::sltiu { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::lb { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::lh { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::lw { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::lbu { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::lhu { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::sb { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::sh { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::sw { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::beq { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::bne { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::blt { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::bge { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::bltu { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::bgeu { rs1, rs2, imm } => {todo!();}
+        ParsedInstruction32::jal { rd, imm } => {todo!();}
+        ParsedInstruction32::jalr { rd, rs1, imm } => {todo!();}
+        ParsedInstruction32::lui { rd, imm } => {todo!();}
+        ParsedInstruction32::auipc { rd, imm } => {todo!();}
+        ParsedInstruction32::ecall => {todo!();}
+        ParsedInstruction32::ebreak => {todo!();}
+    };
 }
 
 fn risc_v_register_to_ga_operand(reg: &Register) -> Operand {
