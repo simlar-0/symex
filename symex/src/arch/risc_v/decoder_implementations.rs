@@ -139,7 +139,7 @@ impl Instruction32ToGAOperations for parsed_instructions::slt {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: risc_v_register_to_ga_operand(&self.rs2),
-                operation: todo!(), // Need to implement signed lt comparison
+                operation: Comparison::SLt,
                 then: vec![
                     GAOperation::Move {
                         destination: risc_v_register_to_ga_operand(&self.rd),
@@ -163,7 +163,7 @@ impl Instruction32ToGAOperations for parsed_instructions::sltu {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: risc_v_register_to_ga_operand(&self.rs2),
-                operation: Comparison::Lt,
+                operation: Comparison::ULt,
                 then: vec![
                     GAOperation::Move {
                         destination: risc_v_register_to_ga_operand(&self.rd),
@@ -286,7 +286,7 @@ impl Instruction32ToGAOperations for parsed_instructions::slti {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: Operand::Immediate(DataWord::Word32(self.imm as u32)),
-                operation: todo!(), // Need to implement signed lt comparison
+                operation: Comparison::SLt,
                 then: vec![
                     GAOperation::Move {
                         destination: risc_v_register_to_ga_operand(&self.rd),
@@ -310,7 +310,7 @@ impl Instruction32ToGAOperations for parsed_instructions::sltiu {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: Operand::Immediate(DataWord::Word32(self.imm as u32)),
-                operation: Comparison::Lt,
+                operation: Comparison::ULt,
                 then: vec![
                     GAOperation::Move {
                         destination: risc_v_register_to_ga_operand(&self.rd),
@@ -528,7 +528,7 @@ impl Instruction32ToGAOperations for parsed_instructions::blt {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: risc_v_register_to_ga_operand(&self.rs2),
-                operation: todo!(), // Need to implement signed lt comparison
+                operation: Comparison::SLt,
                 then: vec![
                     GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                 ],
@@ -555,7 +555,7 @@ impl Instruction32ToGAOperations for parsed_instructions::bge {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: risc_v_register_to_ga_operand(&self.rs2),
-                operation: todo!(), // Need to implement signed ge comparison
+                operation: Comparison::SGt,
                 then: vec![
                     GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                 ],
@@ -582,7 +582,7 @@ impl Instruction32ToGAOperations for parsed_instructions::bltu {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: risc_v_register_to_ga_operand(&self.rs2),
-                operation: Comparison::Lt,
+                operation: Comparison::ULt,
                 then: vec![
                     GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                 ],
@@ -609,7 +609,7 @@ impl Instruction32ToGAOperations for parsed_instructions::bgeu {
             GAOperation::Ite { 
                 lhs: risc_v_register_to_ga_operand(&self.rs1), 
                 rhs: risc_v_register_to_ga_operand(&self.rs2),
-                operation: Comparison::Geq,
+                operation: Comparison::UGeq,
                 then: vec![
                     GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                 ],
