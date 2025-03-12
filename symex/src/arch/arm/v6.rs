@@ -102,7 +102,7 @@ impl Display for ArmV6M {
 fn map_err(err: Error) -> ArchError {
     ArchError::ParsingError(match err {
         Error::InsufficientInput => ParseError::InvalidRegister,
-        Error::Malfromed32BitInstruction => ParseError::MalfromedInstruction,
+        Error::Malfromed32BitInstruction => ParseError::MalformedInstruction,
         Error::Invalid32BitInstruction => ParseError::InvalidInstruction,
         Error::InvalidOpCode => ParseError::InvalidInstruction,
         Error::Unpredictable => ParseError::Unpredictable,

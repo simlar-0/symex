@@ -61,7 +61,7 @@ pub enum ParseError {
 
     /// 32 bit instruction not long enough.
     #[error("Tried to parse a malformed instruction.")]
-    MalfromedInstruction,
+    MalformedInstruction,
 
     /// Opcode not matching valid 32 bit instruction.
     #[error("Instruction not supported in the parser.")]

@@ -44,10 +44,10 @@ impl Display for RISCV {
 fn map_error(e: DisassemblerError) -> ArchError {
     ArchError::ParsingError( match e {
         DisassemblerError::UnsupportedInstructionLength => ParseError::InsufficientInput,
-        DisassemblerError::InvalidFunct3(_) => ParseError::MalfromedInstruction,
-        DisassemblerError::InvalidFunct7(_) => ParseError::MalfromedInstruction,
+        DisassemblerError::InvalidFunct3(_) => ParseError::MalformedInstruction,
+        DisassemblerError::InvalidFunct7(_) => ParseError::MalformedInstruction,
         DisassemblerError::InvalidOpcode(_) => ParseError::InvalidInstruction,
-        DisassemblerError::InvalidImmediate(_) => ParseError::MalfromedInstruction,
+        DisassemblerError::InvalidImmediate(_) => ParseError::MalformedInstruction,
         DisassemblerError::InvalidRegister(_) => ParseError::InvalidRegister,
         DisassemblerError::BitExtensionError(str) => ParseError::Generic(str),
         DisassemblerError::BitExtractionError(str) => ParseError::Generic(str),
