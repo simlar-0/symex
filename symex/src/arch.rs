@@ -7,12 +7,14 @@
 //! architecture specific hooks.
 
 pub mod arm;
+pub mod risc_v;
 /// Defines discovery behaviour for the architectures.
 pub mod discover;
 
 use std::fmt::{Debug, Display};
 
 use arm::{v6::ArmV6M, v7::ArmV7EM};
+use risc_v::RISCV;
 use thiserror::Error;
 
 use crate::{
@@ -96,6 +98,7 @@ pub enum ParseError {
 pub enum SupportedArchitecture<Override: ArchitectureOverride> {
     Armv7EM(ArmV7EM),
     Armv6M(ArmV6M),
+    RISCV(RISCV),
     Override(Override),
 }
 
@@ -206,6 +209,7 @@ impl<Override: ArchitectureOverride> SupportedArchitecture<Override> {
         match self {
             Self::Armv6M(a) => a.translate(buff, state),
             Self::Armv7EM(a) => a.translate(buff, state),
+            Self::RISCV(a) => a.translate(buff, state),
             Self::Override(o) => o.translate(buff, state),
         }
     }
@@ -218,6 +222,7 @@ impl<Override: ArchitectureOverride> SupportedArchitecture<Override> {
         match self {
             Self::Armv6M(a) => a.add_hooks(hooks, sub_program_lookup),
             Self::Armv7EM(a) => a.add_hooks(hooks, sub_program_lookup),
+            Self::RISCV(a) => a.add_hooks(hooks, sub_program_lookup),
             Self::Override(o) => o.add_hooks(hooks, sub_program_lookup),
         }
     }
