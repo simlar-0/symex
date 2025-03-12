@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod decoder;
+pub mod decoder_implementations;
 
 #[derive(Debug, Default, Clone)]
 pub struct RISCV {}
