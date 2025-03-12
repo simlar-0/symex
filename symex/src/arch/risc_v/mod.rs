@@ -8,15 +8,13 @@ use object::{File, Object};
 use regex::Regex;
 use tracing::trace;
 
+use risc_v_disassembler::DisassemblerError;
+
 use crate::{
-    elf_util::{ExpressionType, Variable},
-    general_assembly::{
-        arch::{Arch, ArchError, ParseError},
-        instruction::Instruction,
-        project::{MemoryHookAddress, MemoryReadHook, PCHook, RegisterReadHook, RegisterWriteHook},
-        state::GAState,
-        RunConfig,
-    },
+    arch::{ArchError, Architecture, ParseError, SupportedArchitecture},
+    executor::{hooks::PCHook, state::GAState},
+    smt::{SmtExpr, SmtMap},
+    trace,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -41,4 +39,17 @@ impl Display for RISCV {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
+}
+
+fn map_error(e: DisassemblerError) -> ArchError {
+    ArchError::ParsingError( match e {
+        DisassemblerError::UnsupportedInstructionLength => ParseError::InsufficientInput,
+        DisassemblerError::InvalidFunct3(_) => ParseError::MalfromedInstruction,
+        DisassemblerError::InvalidFunct7(_) => ParseError::MalfromedInstruction,
+        DisassemblerError::InvalidOpcode(_) => ParseError::InvalidInstruction,
+        DisassemblerError::InvalidImmediate(_) => ParseError::MalfromedInstruction,
+        DisassemblerError::InvalidRegister(_) => ParseError::InvalidRegister,
+        DisassemblerError::BitExtensionError(str) => ParseError::Generic(str),
+        DisassemblerError::BitExtractionError(str) => ParseError::Generic(str),
+    })
 }
