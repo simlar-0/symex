@@ -1,44 +1,51 @@
-//#![allow(warnings)]
-
-pub mod decoder;
-pub mod timing;
+#![allow(warnings)] // Until all the unimplemented!() are implemented
 
 use std::fmt::Display;
-use object::{File, Object};
-use regex::Regex;
-use tracing::trace;
 
 use crate::{
-    elf_util::{ExpressionType, Variable},
-    general_assembly::{
-        arch::{Arch, ArchError, ParseError},
+    arch::{ArchError, Architecture, SupportedArchitecture},
+    executor::{
+        hooks::HookContainer,
         instruction::Instruction,
-        project::{MemoryHookAddress, MemoryReadHook, PCHook, RegisterReadHook, RegisterWriteHook},
         state::GAState,
-        RunConfig,
     },
+    project::dwarf_helper::SubProgramMap,
 };
 
-#[derive(Clone, Copy, Debug)]
+pub mod decoder;
+
+#[derive(Debug, Default, Clone)]
 pub struct RISCV {}
 
-impl Arch for RISCV {
-    fn add_hooks(&self, cfg: &mut RunConfig<Self>) {
-        todo!()
+impl Architecture for RISCV {
+    fn translate<C: crate::Composition>(&self, buff: &[u8], state: &GAState<C>) -> Result<Instruction<C>, ArchError> {
+        unimplemented!()
     }
-
-    fn translate(&self, buff: &[u8], _state: &GAState<Self>,) 
-    -> Result<Instruction<Self>, ArchError> {
-        todo!()
+    fn add_hooks<C: crate::Composition>(&self, hooks: &mut HookContainer<C>, sub_program_lookup: &mut SubProgramMap) {
+        unimplemented!()
     }
-
-    fn discover(file: &File<'_>) -> Result<Option<Self>, ArchError> {
-        todo!()
+    fn new() -> Self
+    where
+        Self: Sized,
+    {
+        Self {}
     }
 }
 
 impl Display for RISCV {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        write!(f, "RISC-V")
+    }
+}
+
+impl From<risc_v_disassembler::DisassemblerError> for ArchError{
+    fn from(value: risc_v_disassembler::DisassemblerError) -> Self {
+        unimplemented!()
+    }
+}
+
+impl Into<SupportedArchitecture> for RISCV {
+    fn into(self) -> SupportedArchitecture {
+        SupportedArchitecture::RISCV(self)
     }
 }

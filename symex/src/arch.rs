@@ -15,7 +15,6 @@ use std::fmt::{Debug, Display};
 
 use arm::{v6::ArmV6M, v7::ArmV7EM};
 use risc_v::RISCV;
-use object::File;
 use thiserror::Error;
 
 use crate::{
@@ -124,6 +123,7 @@ impl SupportedArchitecture {
         match self {
             Self::Armv6M(a) => a.translate(buff, state),
             Self::Armv7EM(a) => a.translate(buff, state),
+            Self::RISCV(a) => a.translate(buff, state),
         }
     }
 
@@ -132,6 +132,7 @@ impl SupportedArchitecture {
         match self {
             Self::Armv6M(a) => a.add_hooks(hooks, sub_program_lookup),
             Self::Armv7EM(a) => a.add_hooks(hooks, sub_program_lookup),
+            Self::RISCV(a) => a.add_hooks(hooks, sub_program_lookup),
         }
     }
 }

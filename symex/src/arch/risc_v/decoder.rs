@@ -3,6 +3,7 @@
 use risc_v_disassembler::{
     ParsedInstruction32,
     Register,
+    SpecialRegister,
 };
 
 use general_assembly::{
@@ -12,10 +13,10 @@ use general_assembly::{
 };
 
 use super::RISCV;
-use crate::general_assembly::instruction::Instruction as GAInstruction;
+use crate::executor::instruction::Instruction as GAInstruction;
 
 impl RISCV {
-    pub(super) fn expand(instr: &ParsedInstruction32) -> GAInstruction<RISCV> {
+    pub(super) fn expand<C: crate::Composition>(instr: &ParsedInstruction32) -> GAInstruction<C> {
         let instruction_size: u32 = 32;
         let max_cycle= todo!();
         let memory_access: bool = todo!();
@@ -168,7 +169,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                 GAOperation::Add {
                     destination: risc_v_register_to_ga_operand(&rd),
                     operand1: risc_v_register_to_ga_operand(&rs1),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 }
             ]
         }
@@ -177,7 +178,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                 GAOperation::Xor {
                     destination: risc_v_register_to_ga_operand(&rd),
                     operand1: risc_v_register_to_ga_operand(&rs1),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 }
             ]
         }
@@ -186,7 +187,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                 GAOperation::Or {
                     destination: risc_v_register_to_ga_operand(&rd),
                     operand1: risc_v_register_to_ga_operand(&rs1),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 }
             ]
         }
@@ -195,7 +196,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                 GAOperation::And {
                     destination: risc_v_register_to_ga_operand(&rd),
                     operand1: risc_v_register_to_ga_operand(&rs1),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 }
             ]
         }
@@ -203,7 +204,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
             vec![
                 GAOperation::And {
                     destination: Operand::Local("shift".to_owned()),
-                    operand1: Operand::Immediate(DataWord::Word32(shamt)),
+                    operand1: Operand::Immediate(DataWord::Word8(shamt)),
                     operand2: Operand::Immediate(DataWord::Word32(0x1f)), // 5-bits
                 },
                 GAOperation::Sl {
@@ -217,7 +218,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
             vec![
                 GAOperation::And {
                     destination: Operand::Local("shift".to_owned()),
-                    operand1: Operand::Immediate(DataWord::Word32(shamt)),
+                    operand1: Operand::Immediate(DataWord::Word8(shamt)),
                     operand2: Operand::Immediate(DataWord::Word32(0x1f)), // 5-bits
                 },
                 GAOperation::Srl {
@@ -231,7 +232,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
             vec![
                 GAOperation::And {
                     destination: Operand::Local("shift".to_owned()),
-                    operand1: Operand::Immediate(DataWord::Word32(shamt)),
+                    operand1: Operand::Immediate(DataWord::Word8(shamt)),
                     operand2: Operand::Immediate(DataWord::Word32(0x1f)), // 5-bits
                 },
                 GAOperation::Sra {
@@ -245,7 +246,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
             vec![
                 GAOperation::Ite { 
                     lhs: risc_v_register_to_ga_operand(&rs1), 
-                    rhs: Operand::Immediate(DataWord::Word32(imm)),
+                    rhs: Operand::Immediate(DataWord::Word32(imm as u32)),
                     operation: todo!(), // Need to implement signed lt comparison
                     then: vec![
                         GAOperation::Move {
@@ -266,7 +267,7 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
             vec![
                 GAOperation::Ite { 
                     lhs: risc_v_register_to_ga_operand(&rs1), 
-                    rhs: Operand::Immediate(DataWord::Word32(imm)),
+                    rhs: Operand::Immediate(DataWord::Word32(imm as u32)),
                     operation: Comparison::Lt,
                     then: vec![
                         GAOperation::Move {
@@ -285,53 +286,57 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
         }
         ParsedInstruction32::lb { rd, rs1, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
                     destination: risc_v_register_to_ga_operand(&rd), 
-                    source: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 8 
-                    } 
+                    source: Operand::AddressInLocal("addr".to_owned(), 8),
                 }
             ]
         }
         ParsedInstruction32::lh { rd, rs1, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
                     destination: risc_v_register_to_ga_operand(&rd), 
-                    source: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 16 
-                    } 
+                    source: Operand::AddressInLocal("addr".to_owned(), 16),
                 }
             ]
         }
         ParsedInstruction32::lw { rd, rs1, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
                     destination: risc_v_register_to_ga_operand(&rd), 
-                    source: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 32 
-                    } 
+                    source: Operand::AddressInLocal("addr".to_owned(), 32),
                 }
             ]
         }
         ParsedInstruction32::lbu { rd, rs1, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
-                    destination: Operand::Local("load".to_owned()), 
-                    source: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 8 
-                    } 
+                    destination: risc_v_register_to_ga_operand(&rd), 
+                    source: Operand::AddressInLocal("addr".to_owned(), 8),
                 },
                 GAOperation::ZeroExtend { 
                     destination: risc_v_register_to_ga_operand(&rd), 
-                    operand: Operand::Local("load".to_owned()), 
+                    operand: Operand::Local("addr".to_owned()), 
                     bits: 8, 
                     target_bits: 32
                 }
@@ -339,17 +344,18 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
         }
         ParsedInstruction32::lhu { rd, rs1, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
-                    destination: Operand::Local("load".to_owned()), 
-                    source: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 16 
-                    } 
+                    destination: risc_v_register_to_ga_operand(&rd), 
+                    source: Operand::AddressInLocal("addr".to_owned(), 8),
                 },
                 GAOperation::ZeroExtend { 
                     destination: risc_v_register_to_ga_operand(&rd), 
-                    operand: Operand::Local("load".to_owned()), 
+                    operand: Operand::Local("addr".to_owned()), 
                     bits: 16, 
                     target_bits: 32
                 }
@@ -357,37 +363,40 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
         }
         ParsedInstruction32::sb { rs1, rs2, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
-                    destination: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 8 
-                    },
-                    source: risc_v_register_to_ga_operand(&rs2)
+                    destination: Operand::AddressInLocal("addr".to_owned(), 8),
+                    source: risc_v_register_to_ga_operand(&rs2), 
                 }
             ]
         }
         ParsedInstruction32::sh { rs1, rs2, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
-                    destination: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 16 
-                    },
-                    source: risc_v_register_to_ga_operand(&rs2)
+                    destination: Operand::AddressInLocal("addr".to_owned(), 16),
+                    source: risc_v_register_to_ga_operand(&rs2), 
                 }
             ]
         }
         ParsedInstruction32::sw { rs1, rs2, imm } => {
             vec![
+                GAOperation::Add { 
+                    destination: Operand::Local("addr".to_owned()), 
+                    operand1: risc_v_register_to_ga_operand(&rs1), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), 
+                },
                 GAOperation::Move { 
-                    destination: Operand::AddressWithOffset { 
-                        address: risc_v_register_to_ga_operand(&rs1), 
-                        offset_reg: Operand::Immediate(DataWord::Word32(imm)), 
-                        width: 32 
-                    },
-                    source: risc_v_register_to_ga_operand(&rs2)
+                    destination: Operand::AddressInLocal("addr".to_owned(), 32),
+                    source: risc_v_register_to_ga_operand(&rs2), 
                 }
             ]
         }
@@ -398,16 +407,16 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                     rhs: risc_v_register_to_ga_operand(&rs2),
                     operation: Comparison::Eq,
                     then: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(0)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                     ],
                     otherwise: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(1)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(1)))
                     ],
                 },
                 GAOperation::Add {
                     destination: Operand::Local("new_pc".to_owned()),
                     operand1: Operand::Register("PC".to_owned()),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 },
                 GAOperation::ConditionalJump {
                     destination: Operand::Local("new_pc".to_owned()),
@@ -422,16 +431,16 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                     rhs: risc_v_register_to_ga_operand(&rs2),
                     operation: Comparison::Eq,
                     then: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(0)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                     ],
                     otherwise: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(1)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(1)))
                     ],
                 },
                 GAOperation::Add {
                     destination: Operand::Local("new_pc".to_owned()),
                     operand1: Operand::Register("PC".to_owned()),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 },
                 GAOperation::ConditionalJump {
                     destination: Operand::Local("new_pc".to_owned()),
@@ -446,16 +455,16 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                     rhs: risc_v_register_to_ga_operand(&rs2),
                     operation: todo!(), // Need to implement signed lt comparison
                     then: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(0)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                     ],
                     otherwise: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(1)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(1)))
                     ],
                 },
                 GAOperation::Add {
                     destination: Operand::Local("new_pc".to_owned()),
                     operand1: Operand::Register("PC".to_owned()),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 },
                 GAOperation::ConditionalJump {
                     destination: Operand::Local("new_pc".to_owned()),
@@ -470,16 +479,16 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                     rhs: risc_v_register_to_ga_operand(&rs2),
                     operation: todo!(), // Need to implement signed ge comparison
                     then: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(0)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                     ],
                     otherwise: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(1)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(1)))
                     ],
                 },
                 GAOperation::Add {
                     destination: Operand::Local("new_pc".to_owned()),
                     operand1: Operand::Register("PC".to_owned()),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 },
                 GAOperation::ConditionalJump {
                     destination: Operand::Local("new_pc".to_owned()),
@@ -494,16 +503,16 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                     rhs: risc_v_register_to_ga_operand(&rs2),
                     operation: Comparison::Lt,
                     then: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(0)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                     ],
                     otherwise: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(1)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(1)))
                     ],
                 },
                 GAOperation::Add {
                     destination: Operand::Local("new_pc".to_owned()),
                     operand1: Operand::Register("PC".to_owned()),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 },
                 GAOperation::ConditionalJump {
                     destination: Operand::Local("new_pc".to_owned()),
@@ -518,16 +527,16 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                     rhs: risc_v_register_to_ga_operand(&rs2),
                     operation: Comparison::Geq,
                     then: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(0)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(0)))
                     ],
                     otherwise: vec![
-                        GAOperation::SetZFlag(Immediate(DataWord::Word32(1)))
+                        GAOperation::SetZFlag(Operand::Immediate(DataWord::Word32(1)))
                     ],
                 },
                 GAOperation::Add {
                     destination: Operand::Local("new_pc".to_owned()),
                     operand1: Operand::Register("PC".to_owned()),
-                    operand2: Operand::Immediate(DataWord::Word32(imm)),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
                 },
                 GAOperation::ConditionalJump {
                     destination: Operand::Local("new_pc".to_owned()),
@@ -535,13 +544,54 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
                 },
             ]
         }
-        ParsedInstruction32::jal { rd, imm } => {todo!();}
-        ParsedInstruction32::jalr { rd, rs1, imm } => {todo!();}
-        ParsedInstruction32::lui { rd, imm } => {todo!();}
-        ParsedInstruction32::auipc { rd, imm } => {todo!();}
+        ParsedInstruction32::jal { rd, imm } => {
+            vec![
+                GAOperation::Add {
+                    destination: risc_v_register_to_ga_operand(&rd),
+                    operand1: Operand::Register("PC".to_owned()),
+                    operand2: Operand::Immediate(DataWord::Word32(4)),
+                },
+                GAOperation::Add {
+                    destination: Operand::Register("PC".to_owned()),
+                    operand1: Operand::Register("PC".to_owned()),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
+                },
+            ]
+        }
+        ParsedInstruction32::jalr { rd, rs1, imm } => {
+            vec![
+                GAOperation::Add {
+                    destination: risc_v_register_to_ga_operand(&rd),
+                    operand1: Operand::Register("PC".to_owned()),
+                    operand2: Operand::Immediate(DataWord::Word32(4)),
+                },
+                GAOperation::Add {
+                    destination: Operand::Register("PC".to_owned()),
+                    operand1: risc_v_register_to_ga_operand(&rs1),
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)),
+                },
+            ]
+        }
+        ParsedInstruction32::lui { rd, imm } => {
+            vec![
+                GAOperation::Move { 
+                    destination: risc_v_register_to_ga_operand(&rd), 
+                    source: Operand::Immediate(DataWord::Word32(imm as u32)), // The disassmebler already shifts imm
+                }
+            ]
+        }
+        ParsedInstruction32::auipc { rd, imm } => {
+            vec![
+                GAOperation::Add { 
+                    destination: risc_v_register_to_ga_operand(&rd), 
+                    operand1: Operand::Register("PC".to_owned()), 
+                    operand2: Operand::Immediate(DataWord::Word32(imm as u32)), // The disassmebler already shifts imm 
+                },
+            ]
+        }
         ParsedInstruction32::ecall => {todo!();}
         ParsedInstruction32::ebreak => {todo!();}
-    };
+    }
 }
 
 fn risc_v_register_to_ga_operand(reg: &Register) -> Operand {
