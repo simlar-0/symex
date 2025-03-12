@@ -631,6 +631,9 @@ fn risc_v_register_to_ga_operand(reg: &Register) -> Operand {
     })
 }
 
-fn risc_v_special_register_to_operand() -> Operand {
-    todo!() // Must make special register public in RISC-V disassembler
+fn risc_v_special_register_to_operand(reg: &SpecialRegister) -> Operand {
+    Operand::Register(match reg {
+        SpecialRegister::XLEN => "XLEN".to_owned(),
+        SpecialRegister::pc => "PC".to_owned(),
+    })
 }
