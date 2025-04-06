@@ -11,6 +11,8 @@ use general_assembly::{
     operation::Operation as GAOperation,
 };
 
+use transpiler::psuedo;
+
 use super::{
     RISCV,
     decoder::risc_v_register_to_ga_operand,
@@ -30,7 +32,15 @@ impl Instruction32ToGAOperations for parsed_instructions::add {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: risc_v_register_to_ga_operand(&self.rs2),
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+
+        pseudo!([
+            let rd = rs1 + rs2;
+        ])
     }
 }
 
@@ -42,7 +52,15 @@ impl Instruction32ToGAOperations for parsed_instructions::sub {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: risc_v_register_to_ga_operand(&self.rs2),
             }
-        ]
+        ];
+        
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+
+        pseudo!([
+            let rd = rs1 - rs2;
+        ])
     }
 }
 
@@ -54,7 +72,15 @@ impl Instruction32ToGAOperations for parsed_instructions::xor {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: risc_v_register_to_ga_operand(&self.rs2),
             }
-        ]
+        ];
+        
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+
+        pseudo!([
+            let rd = rs1 ^ rs2;
+        ])
     }
 }
 
@@ -66,7 +92,15 @@ impl Instruction32ToGAOperations for parsed_instructions::or {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: risc_v_register_to_ga_operand(&self.rs2),
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+
+        pseudo!([
+            let rd = rs1 | rs2;
+        ])
     }
 }
 
@@ -78,7 +112,15 @@ impl Instruction32ToGAOperations for parsed_instructions::and {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: risc_v_register_to_ga_operand(&self.rs2),
             }
-        ]
+        ];
+        
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+
+        pseudo!([
+            let rd = rs1 & rs2;
+        ])
     }
 }
 
@@ -95,7 +137,16 @@ impl Instruction32ToGAOperations for parsed_instructions::sll {
                 operand: risc_v_register_to_ga_operand(&self.rs1),
                 shift: Operand::Local("shift".to_owned()),
             },
-        ]
+        ];
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+        let mask = Operand::Immediate(DataWord::Word32(0x1f));
+
+        psuedo!([
+            let shift = rs2 & mask; // Keep lower 5 bits
+            let rd = rs1 << shift;
+        ])
     }
 }
 
@@ -112,7 +163,17 @@ impl Instruction32ToGAOperations for parsed_instructions::srl {
                 operand: risc_v_register_to_ga_operand(&self.rs1),
                 shift: Operand::Local("shift".to_owned()),
             },
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+        let mask = Operand::Immediate(DataWord::Word32(0x1f));
+
+        psuedo!([
+            let shift = rs2 & mask; // Keep lower 5 bits
+            let rd = rs1 >> shift;
+        ])
     }
 }
 
@@ -129,7 +190,17 @@ impl Instruction32ToGAOperations for parsed_instructions::sra {
                 operand: risc_v_register_to_ga_operand(&self.rs1),
                 shift: Operand::Local("shift".to_owned()),
             },
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let rs2 = risc_v_register_to_ga_operand(&self.rs2);
+        let mask = Operand::Immediate(DataWord::Word32(0x1f));
+
+        psuedo!([
+            let shift = rs2 & mask; // Keep lower 5 bits
+            let rd = rs1 asr shift;
+        ])
     }
 }
 
@@ -184,12 +255,19 @@ impl Instruction32ToGAOperations for parsed_instructions::sltu {
 impl Instruction32ToGAOperations for parsed_instructions::addi {
     fn instruction_to_ga_operations(&self, instr: &ParsedInstruction32) -> Vec<GAOperation> {
         vec![
-            GAOperation::Add {
-                destination: risc_v_register_to_ga_operand(&self.rd),
-                operand1: risc_v_register_to_ga_operand(&self.rs1),
-                operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)),
-            }
-        ]
+                GAOperation::Add {
+                    destination: risc_v_register_to_ga_operand(&self.rd),
+                    operand1: risc_v_register_to_ga_operand(&self.rs1),
+                    operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)),
+                }
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = Operand::Immediate(DataWord::Word32(self.imm as u32));
+        psuedo!([
+            let rd = rs1 + imm;
+        ])
     }
 }
 
@@ -201,8 +279,15 @@ impl Instruction32ToGAOperations for parsed_instructions::xori {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)),
             }
-        ]
-    }
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = Operand::Immediate(DataWord::Word32(self.imm as u32));
+        psuedo!([
+            let rd = rs1 ^ imm;
+        ])
+    }   
 }
 
 impl Instruction32ToGAOperations for parsed_instructions::ori {
@@ -213,7 +298,14 @@ impl Instruction32ToGAOperations for parsed_instructions::ori {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)),
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = Operand::Immediate(DataWord::Word32(self.imm as u32));
+        psuedo!([
+            let rd = rs1 | imm;
+        ])
     }
 }
 
@@ -225,7 +317,14 @@ impl Instruction32ToGAOperations for parsed_instructions::andi {
                 operand1: risc_v_register_to_ga_operand(&self.rs1),
                 operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)),
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = Operand::Immediate(DataWord::Word32(self.imm as u32));
+        psuedo!([
+            let rd = rs1 & imm;
+        ])
     }
 }
 
@@ -242,7 +341,16 @@ impl Instruction32ToGAOperations for parsed_instructions::slli {
                 operand: risc_v_register_to_ga_operand(&self.rs1),
                 shift: Operand::Local("shift".to_owned()),
             },
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let shamt = Operand::Immediate(DataWord::Word8(self.shamt));
+        let mask = Operand::Immediate(DataWord::Word32(0x1f));
+        psuedo!([
+            let shift = shamt & mask; // Keep lower 5 bits
+            let rd = rs1 << shift;
+        ])
     }
 }
 
@@ -259,7 +367,15 @@ impl Instruction32ToGAOperations for parsed_instructions::srli {
                 operand: risc_v_register_to_ga_operand(&self.rs1),
                 shift: Operand::Local("shift".to_owned()),
             },
-        ]
+        ];
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let shamt = self.shamt;
+        let mask = Operand::Immediate(DataWord::Word32(0x1f));
+        psuedo!([
+            let shift = shamt & mask; // Keep lower 5 bits
+            let rd = rs1 >> shift;
+        ])
     }
 }
 
@@ -276,7 +392,16 @@ impl Instruction32ToGAOperations for parsed_instructions::srai {
                 operand: risc_v_register_to_ga_operand(&self.rs1),
                 shift: Operand::Local("shift".to_owned()),
             },
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let shamt = self.shamt;
+
+        psuedo!([
+            let shift = shamt & 0x1f; // Keep lower 5 bits
+            let rd = rs1 asr shift;
+        ])
     }
 }
 
@@ -337,10 +462,25 @@ impl Instruction32ToGAOperations for parsed_instructions::lb {
                 operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)), 
             },
             GAOperation::Move { 
-                destination: risc_v_register_to_ga_operand(&self.rd), 
+                destination: Operand::Local("value".to_owned()), 
                 source: Operand::AddressInLocal("addr".to_owned(), 8),
+            },
+            GAOperation::SignExtend { 
+                destination: risc_v_register_to_ga_operand(&self.rd), 
+                operand: Operand::Local("value".to_owned()), 
+                sign_bit: 8,
+                target_size: 32
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = self.imm as u32;
+        psuedo!([
+            let addr = rs1 + imm;
+            let value = LocalAddress(addr, 8);
+            let rd = SignExtend(value, 8);
+        ])
     }
 }
 
@@ -353,10 +493,26 @@ impl Instruction32ToGAOperations for parsed_instructions::lh {
                 operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)), 
             },
             GAOperation::Move { 
-                destination: risc_v_register_to_ga_operand(&self.rd), 
+                destination: Operand::Local("value".to_owned()), 
                 source: Operand::AddressInLocal("addr".to_owned(), 16),
+            },
+            GAOperation::SignExtend { 
+                destination: risc_v_register_to_ga_operand(&self.rd), 
+                operand: Operand::Local("value".to_owned()), 
+                sign_bit: 16,
+                target_size: 32
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = self.imm as u32;
+        
+        psuedo!([
+            let addr = rs1 + imm;
+            let value = LocalAddress(addr, 16);
+            let rd = SignExtend(value, 16);
+        ])
     }
 }
 
@@ -372,7 +528,16 @@ impl Instruction32ToGAOperations for parsed_instructions::lw {
                 destination: risc_v_register_to_ga_operand(&self.rd), 
                 source: Operand::AddressInLocal("addr".to_owned(), 32),
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = self.imm as u32;
+
+        psuedo!([
+            let addr = rs1 + imm;
+            let rd = addr;
+        ])
     }
 }
 
@@ -385,16 +550,26 @@ impl Instruction32ToGAOperations for parsed_instructions::lbu {
                 operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)), 
             },
             GAOperation::Move { 
-                destination: risc_v_register_to_ga_operand(&self.rd), 
+                destination: Operand::Local("value".to_owned()), 
                 source: Operand::AddressInLocal("addr".to_owned(), 8),
             },
             GAOperation::ZeroExtend { 
                 destination: risc_v_register_to_ga_operand(&self.rd), 
-                operand: Operand::Local("addr".to_owned()), 
+                operand: Operand::Local("value".to_owned()), 
                 bits: 8, 
                 target_bits: 32
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = self.imm as u32;
+        
+        psuedo!([
+            let addr = rs1 + imm;
+            let value = LocalAddress(addr, 8);
+            let rd = ZeroExtend(value, 8);
+        ])
     }
 }
 
@@ -407,16 +582,26 @@ impl Instruction32ToGAOperations for parsed_instructions::lhu {
                 operand2: Operand::Immediate(DataWord::Word32(self.imm as u32)), 
             },
             GAOperation::Move { 
-                destination: risc_v_register_to_ga_operand(&self.rd), 
-                source: Operand::AddressInLocal("addr".to_owned(), 8),
+                destination: Operand::Local("value".to_owned()), 
+                source: Operand::AddressInLocal("addr".to_owned(), 16),
             },
             GAOperation::ZeroExtend { 
                 destination: risc_v_register_to_ga_operand(&self.rd), 
-                operand: Operand::Local("addr".to_owned()), 
+                operand: Operand::Local("value".to_owned()), 
                 bits: 16, 
                 target_bits: 32
             }
-        ]
+        ];
+
+        let rd = risc_v_register_to_ga_operand(&self.rd);
+        let rs1 = risc_v_register_to_ga_operand(&self.rs1);
+        let imm = self.imm as u32;
+
+        psuedo!([
+            let addr = rs1 + imm;
+            let value = LocalAddress(addr, 16);
+            let rd = ZeroExtend(value, 16);
+        ])
     }
 }
 
@@ -700,5 +885,25 @@ impl Instruction32ToGAOperations for parsed_instructions::ebreak {
         vec![
             GAOperation::Abort {error:"ebreak requires external system modelling".to_string()}
         ]
+    }
+}
+
+mod sealed {
+    pub trait Into<T> {
+        fn local_into(self) -> T;
+    }
+}
+
+use sealed::Into;
+
+impl Into<Operand> for u32 {
+    fn local_into(self) -> Operand {
+        Operand::Immediate(DataWord::Word32(self))
+    }
+}
+
+impl Into<Operand> for u8 {
+    fn local_into(self) -> Operand {
+        Operand::Immediate(DataWord::Word8(self))
     }
 }
