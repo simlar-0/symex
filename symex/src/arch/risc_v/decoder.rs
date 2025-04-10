@@ -79,11 +79,11 @@ fn instruction_to_ga_operations(instr: &ParsedInstruction32) -> Vec<GAOperation>
     }
 }
 
-pub(crate) trait Instruction32ToGAOperations {
+pub trait Instruction32ToGAOperations {
     fn instruction_to_ga_operations(&self, instr: &ParsedInstruction32) -> Vec<GAOperation>;
 }
 
-pub mod sealed {
+pub(crate) mod sealed {
     pub trait Into<T> {
         fn local_into(self) -> T;
     }
