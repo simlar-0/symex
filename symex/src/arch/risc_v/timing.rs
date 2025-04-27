@@ -1,8 +1,4 @@
-use risc_v_disassembler::{
-    ParsedInstruction32,
-    Register,
-    SpecialRegister,
-};
+use risc_v_disassembler::ParsedInstruction32;
 
 use crate::executor::{instruction::CycleCount, state::GAState};
 
