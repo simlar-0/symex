@@ -2,7 +2,6 @@ use risc_v_disassembler::{
     ParsedInstruction32,
     parsed_instructions,
     Register,
-    SpecialRegister,
 };
 
 use general_assembly::{
