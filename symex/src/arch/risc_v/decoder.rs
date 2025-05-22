@@ -3,7 +3,6 @@
 use risc_v_disassembler::{
     ParsedInstruction32,
     Register,
-    SpecialRegister,
 };
 
 use general_assembly::{
@@ -144,15 +143,6 @@ impl Into<Operand> for Register {
             Register::x29 => "X29".to_owned(),
             Register::x30 => "X30".to_owned(),
             Register::x31 => "X31".to_owned(),
-        })
-    }
-}
-
-impl Into<Operand> for SpecialRegister {
-    fn local_into(self) -> Operand {
-        Operand::Register(match self {
-            SpecialRegister::XLEN => "XLEN".to_owned(),
-            SpecialRegister::pc => "PC".to_owned(),
         })
     }
 }
