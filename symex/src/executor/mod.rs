@@ -293,8 +293,9 @@ impl<'vm, C: Composition> GAExecutor<'vm, C> {
                 HookOrInstruction::PcHook(hook) => match hook {
                     PCHook::Continue => {
                         debug!("Continuing");
-                        let lr = self.state.get_register("LR".to_owned()).unwrap();
-                        self.state.set_register("PC".to_owned(), lr)?;
+                        let register_name = self.state.architecture.get_return_address_register_name();
+                        let ra = self.state.get_register(register_name.to_owned()).unwrap();
+                        self.state.set_register("PC".to_owned(), ra)?;
                         continue;
                     }
                     PCHook::EndSuccess => {
@@ -376,8 +377,9 @@ impl<'vm, C: Composition> GAExecutor<'vm, C> {
                 HookOrInstruction::PcHook(hook) => match hook {
                     PCHook::Continue => {
                         debug!("Continuing");
-                        let lr = self.state.get_register("LR".to_owned()).unwrap();
-                        self.state.set_register("PC".to_owned(), lr)?;
+                        let register_name = self.state.architecture.get_return_address_register_name();
+                        let ra = self.state.get_register(register_name.to_owned()).unwrap();
+                        self.state.set_register("PC".to_owned(), ra)?;
                         continue;
                     }
                     PCHook::EndSuccess => {
@@ -442,8 +444,9 @@ impl<'vm, C: Composition> GAExecutor<'vm, C> {
                 HookOrInstruction::PcHook(hook) => match hook {
                     PCHook::Continue => {
                         debug!("Continuing");
-                        let lr = self.state.get_register("LR".to_owned()).unwrap();
-                        self.state.set_register("PC".to_owned(), lr)?;
+                        let register_name = self.state.architecture.get_return_address_register_name();
+                        let ra = self.state.get_register(register_name.to_owned()).unwrap();
+                        self.state.set_register("PC".to_owned(), ra)?;
                         continue;
                     }
                     PCHook::EndSuccess => {

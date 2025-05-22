@@ -41,6 +41,12 @@ impl<Override: ArchitectureOverride> Architecture<Override> for ArmV6M {
     {
     }
 
+    fn get_return_address_register_name<C>() -> String
+    where
+        C: crate::Composition<ArchitectureOverride = Override> {
+    "LR".to_string()
+    }
+
     #[allow(clippy::cast_possible_truncation)]
     fn add_hooks<C: crate::Composition>(&self, cfg: &mut crate::executor::hooks::HookContainer<C>, map: &mut crate::project::dwarf_helper::SubProgramMap) {
         let symbolic_sized = |state: &mut GAState<_>| {

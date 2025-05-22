@@ -90,7 +90,8 @@ impl<C: Composition> GAState<C> {
 
         // Set the link register to max value to detect when returning from a function.
         let end_pc_expr = ctx.from_u64(end_address, ptr_size as u32);
-        memory.set_register("LR", end_pc_expr)?;
+        let register_name = self.state.architecture.get_return_address_register_name();
+        memory.set_register(register_name.to_owned(), end_pc_expr)?;
         let mut ret = Self {
             constraints,
             memory,

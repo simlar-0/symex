@@ -937,8 +937,9 @@ impl<C: Composition> HookContainer<C> {
             trace!("Reset the cycle count (cycle count: {})", state.get_cycle_count());
 
             // jump back to where the function was called from
-            let lr = state.get_register("LR".to_owned()).unwrap();
-            state.set_register("PC".to_owned(), lr)?;
+            let register_name = state.architecture.get_return_address_register_name();
+            let ra = state.get_register(register_name.to_owned()).unwrap();
+            state.set_register("PC".to_owned(), ra)?;
             Ok(())
         };
         let end_cyclecount = |state: &mut GAState<C>| {
@@ -947,8 +948,9 @@ impl<C: Composition> HookContainer<C> {
             trace!("Stopped counting cycles (cycle count: {})", state.get_cycle_count());
 
             // jump back to where the function was called from
-            let lr = state.get_register("LR".to_owned()).unwrap();
-            state.set_register("PC".to_owned(), lr)?;
+            let register_name = state.architecture.get_return_address_register_name();
+            let ra = state.get_register(register_name.to_owned()).unwrap();
+            state.set_register("PC".to_owned(), ra)?;
             Ok(())
         };
 

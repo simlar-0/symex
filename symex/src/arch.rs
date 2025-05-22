@@ -107,6 +107,10 @@ pub trait ArchitectureOverride: Architecture<Self> + Clone + Default {
     /// Checks if the  value is an armv7em override.
     ///
     /// If so, it returns the underlying representation.
+    
+    fn as_riscv(&mut self) -> Option<&mut RISCV> {
+        None
+    }
     fn as_arm_v7(&mut self) -> Option<&mut ArmV7EM> {
         None
     }
@@ -151,6 +155,11 @@ pub trait Architecture<Override: ArchitectureOverride>: Debug + Display + Into<S
     where
         C: Composition<ArchitectureOverride = Override>;
 
+    /// Architecture dependent return address register
+    fn get_return_address_register_name<C>() -> String
+    where
+        C: Composition<ArchitectureOverride = Override>;
+
     /// Creates a new instance of the architecture
     fn new() -> Self
     where
@@ -187,6 +196,13 @@ impl Architecture<Self> for NoArchitectureOverride {
     fn initiate_state<C>(state: &mut GAState<C>)
     where
         C: Composition<ArchitectureOverride = Self>,
+    {
+        unimplemented!("NoArchitectureOverride is not an architecture. Runtime checks failed.");
+    }
+
+    fn get_return_address_register_name<C>() -> String
+    where
+        C: Composition<ArchitectureOverride = Override>,
     {
         unimplemented!("NoArchitectureOverride is not an architecture. Runtime checks failed.");
     }
@@ -236,6 +252,7 @@ impl<Override: ArchitectureOverride> SupportedArchitecture<Override> {
         match self {
             Self::Armv6M(_) => ArmV6M::pre_instruction_loading_hook,
             Self::Armv7EM(_) => ArmV7EM::pre_instruction_loading_hook,
+            Self::RISCV(_) => RISCV::pre_instruction_loading_hook,
             Self::Override(_) => C::ArchitectureOverride::pre_instruction_loading_hook,
         }
     }
@@ -249,6 +266,7 @@ impl<Override: ArchitectureOverride> SupportedArchitecture<Override> {
         match self {
             Self::Armv6M(_) => ArmV6M::post_instruction_execution_hook,
             Self::Armv7EM(_) => ArmV7EM::post_instruction_execution_hook,
+            Self::RISCV(_) => RISCV::post_instruction_execution_hook,
             Self::Override(_) => C::ArchitectureOverride::post_instruction_execution_hook,
         }
     }
@@ -260,7 +278,16 @@ impl<Override: ArchitectureOverride> SupportedArchitecture<Override> {
         match self {
             Self::Armv6M(_) => ArmV6M::initiate_state,
             Self::Armv7EM(_) => ArmV7EM::initiate_state,
+            Self::RISCV(_) => RISCV::initiate_state,
             Self::Override(_) => C::ArchitectureOverride::initiate_state,
+        }
+    }
+    
+    fn as_riscv(&mut self) -> &mut RISCV {
+        match self {
+            Self::RISCV(riscv) => riscv,
+            Self::Override(o) => o.as_riscv().expect("Runtime checks to be valid."),
+            _ => unimplemented!("Runtime checks failed."),
         }
     }
 

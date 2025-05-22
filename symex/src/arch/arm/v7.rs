@@ -390,6 +390,12 @@ impl<Override: ArchitectureOverride> Architecture<Override> for ArmV7EM {
         Self::it_advance(state);
     }
 
+    fn get_return_address_register_name<C>() -> String
+        where
+            C: crate::Composition<ArchitectureOverride = Override> {
+        "LR".to_string()
+    }
+
     #[allow(clippy::cast_possible_truncation)]
     fn add_hooks<C: crate::Composition>(&self, cfg: &mut HookContainer<C>, map: &mut SubProgramMap) {
         trace!("Adding armv7em hooks");

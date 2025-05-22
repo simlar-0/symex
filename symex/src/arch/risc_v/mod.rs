@@ -20,12 +20,44 @@ pub mod timing;
 pub struct RISCV {}
 
 impl Architecture for RISCV {
-    fn translate<C: crate::Composition>(&self, buff: &[u8], state: &GAState<C>) -> Result<Instruction<C>, ArchError> {
-        unimplemented!()
+    type ISA = ();
+    
+    fn translate<C: Composition>(&self, buff: &[u8], state: &GAState<C>) -> Result<Instruction<C>, ArchError> {
+        unimplemented!();
     }
-    fn add_hooks<C: crate::Composition>(&self, hooks: &mut HookContainer<C>, sub_program_lookup: &mut SubProgramMap) {
-        unimplemented!()
+
+    fn add_hooks<C: Composition>(&self, hooks: &mut HookContainer<C>, sub_program_lookup: &mut SubProgramMap) {
+        unimplemented!();
     }
+
+    fn pre_instruction_loading_hook<C>(state: &mut GAState<C>)
+    where
+        C: Composition<ArchitectureOverride = Self>,
+    {
+        unimplemented!();
+    }
+
+    fn post_instruction_execution_hook<C>(state: &mut GAState<C>)
+    where
+        C: Composition<ArchitectureOverride = Self>,
+    {
+        unimplemented!();
+    }
+
+    fn initiate_state<C>(state: &mut GAState<C>)
+    where
+        C: Composition<ArchitectureOverride = Self>,
+    {
+        unimplemented!();
+    }
+
+    fn get_return_address_register_name<C>() -> String
+    where
+        C: Composition<ArchitectureOverride = Override>,
+    {
+        "X1".to_string()
+    }
+    
     fn new() -> Self
     where
         Self: Sized,
