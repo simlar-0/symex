@@ -3,13 +3,14 @@
 use std::fmt::Display;
 
 use crate::{
-    arch::{ArchError, Architecture, SupportedArchitecture},
+    arch::{ArchError, Architecture, ArchitectureOverride, SupportedArchitecture},
     executor::{
         hooks::HookContainer,
         instruction::Instruction,
         state::GAState,
     },
     project::dwarf_helper::SubProgramMap,
+    Composition,
 };
 
 pub mod decoder;
@@ -19,7 +20,7 @@ pub mod timing;
 #[derive(Debug, Default, Clone)]
 pub struct RISCV {}
 
-impl Architecture for RISCV {
+impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
     type ISA = ();
     
     fn translate<C: Composition>(&self, buff: &[u8], state: &GAState<C>) -> Result<Instruction<C>, ArchError> {
@@ -32,28 +33,27 @@ impl Architecture for RISCV {
 
     fn pre_instruction_loading_hook<C>(state: &mut GAState<C>)
     where
-        C: Composition<ArchitectureOverride = Self>,
+        C: Composition<ArchitectureOverride = Override>,
     {
         unimplemented!();
     }
 
     fn post_instruction_execution_hook<C>(state: &mut GAState<C>)
     where
-        C: Composition<ArchitectureOverride = Self>,
+        C: Composition<ArchitectureOverride = Override>,
     {
         unimplemented!();
     }
 
     fn initiate_state<C>(state: &mut GAState<C>)
     where
-        C: Composition<ArchitectureOverride = Self>,
+        C: Composition<ArchitectureOverride = Override>,
     {
         unimplemented!();
     }
 
-    fn get_return_address_register_name<C>() -> String
+    fn get_return_address_register_name() -> String
     where
-        C: Composition<ArchitectureOverride = Override>,
     {
         "X1".to_string()
     }
@@ -78,8 +78,8 @@ impl From<risc_v_disassembler::DisassemblerError> for ArchError{
     }
 }
 
-impl Into<SupportedArchitecture> for RISCV {
-    fn into(self) -> SupportedArchitecture {
-        SupportedArchitecture::RISCV(self)
+impl<Override: ArchitectureOverride> From<RISCV> for SupportedArchitecture<Override> {
+    fn from(val: RISCV) -> SupportedArchitecture<Override> {
+        SupportedArchitecture::RISCV(val)
     }
 }

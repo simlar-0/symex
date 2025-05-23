@@ -41,10 +41,10 @@ impl<Override: ArchitectureOverride> Architecture<Override> for ArmV6M {
     {
     }
 
-    fn get_return_address_register_name<C>() -> String
+    fn get_return_address_register_name() -> String
     where
-        C: crate::Composition<ArchitectureOverride = Override> {
-    "LR".to_string()
+    {
+            "LR".to_string()
     }
 
     #[allow(clippy::cast_possible_truncation)]

@@ -390,9 +390,9 @@ impl<Override: ArchitectureOverride> Architecture<Override> for ArmV7EM {
         Self::it_advance(state);
     }
 
-    fn get_return_address_register_name<C>() -> String
+    fn get_return_address_register_name() -> String
         where
-            C: crate::Composition<ArchitectureOverride = Override> {
+    {
         "LR".to_string()
     }
 

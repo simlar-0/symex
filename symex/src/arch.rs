@@ -156,9 +156,7 @@ pub trait Architecture<Override: ArchitectureOverride>: Debug + Display + Into<S
         C: Composition<ArchitectureOverride = Override>;
 
     /// Architecture dependent return address register
-    fn get_return_address_register_name<C>() -> String
-    where
-        C: Composition<ArchitectureOverride = Override>;
+    fn get_return_address_register_name() -> String;
 
     /// Creates a new instance of the architecture
     fn new() -> Self
@@ -200,9 +198,7 @@ impl Architecture<Self> for NoArchitectureOverride {
         unimplemented!("NoArchitectureOverride is not an architecture. Runtime checks failed.");
     }
 
-    fn get_return_address_register_name<C>() -> String
-    where
-        C: Composition<ArchitectureOverride = Override>,
+    fn get_return_address_register_name() -> String
     {
         unimplemented!("NoArchitectureOverride is not an architecture. Runtime checks failed.");
     }
@@ -282,6 +278,16 @@ impl<Override: ArchitectureOverride> SupportedArchitecture<Override> {
             Self::Override(_) => C::ArchitectureOverride::initiate_state,
         }
     }
+
+    pub fn get_return_address_register_name() -> String
+    {
+        match self {
+            Self::Armv6M(a) => a.get_return_address_register_name(),
+            Self::Armv7EM(a) => a.get_return_address_register_name(),
+            Self::RISCV(a) => a.get_return_address_register_name(),
+            Self::Override(o) => o.get_return_address_register_name(),
+        }
+    }
     
     fn as_riscv(&mut self) -> &mut RISCV {
         match self {
@@ -326,6 +332,15 @@ impl<Override: ArchitectureOverride> TryAsMut<ArmV6M> for SupportedArchitecture<
     fn try_mut(&mut self) -> crate::Result<&mut ArmV6M> {
         match self {
             Self::Armv6M(a) => Ok(a),
+            _ => Err(crate::GAError::InvalidArchitectureRequested.into()),
+        }
+    }
+}
+
+impl<Override: ArchitectureOverride> TryAsMut<RISCV> for SupportedArchitecture<Override> {
+    fn try_mut(&mut self) -> crate::Result<&mut RISCV> {
+        match self {
+            Self::RISCV(a) => Ok(a),
             _ => Err(crate::GAError::InvalidArchitectureRequested.into()),
         }
     }
