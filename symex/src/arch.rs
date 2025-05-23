@@ -88,6 +88,15 @@ pub enum ParseError {
     Generic(&'static str),
 }
 
+/// Enumerates all of the registers needed to be compatible with general assembly.
+#[derive(Debug, Clone)]
+pub enum InterfaceRegister {
+    /// The program counter register, likely "PC"
+    ProgramCounter,
+    /// The return address register, "LR" on ARM
+    ReturnAddress,
+}
+
 /// Enumerates the discoverable machine code formats.
 ///
 /// # Note
@@ -155,8 +164,8 @@ pub trait Architecture<Override: ArchitectureOverride>: Debug + Display + Into<S
     where
         C: Composition<ArchitectureOverride = Override>;
 
-    /// Architecture dependent return address register
-    fn get_return_address_register_name() -> String;
+    /// Architecture dependent register names required by general assembly.
+    fn get_register_name(reg: InterfaceRegister) -> String;
 
     /// Creates a new instance of the architecture
     fn new() -> Self
@@ -167,6 +176,11 @@ pub trait Architecture<Override: ArchitectureOverride>: Debug + Display + Into<S
 impl Architecture<Self> for NoArchitectureOverride {
     type ISA = ();
 
+    fn new() -> Self
+        where
+            Self: Sized {
+        Self
+    }
     /// Converts a slice of bytes to an [`Instruction`]
     fn translate<C: Composition>(&self, buff: &[u8], state: &GAState<C>) -> Result<Instruction<C>, ArchError> {
         unimplemented!("NoArchitectureOverride is not an architecture. Runtime checks failed.");
@@ -198,17 +212,9 @@ impl Architecture<Self> for NoArchitectureOverride {
         unimplemented!("NoArchitectureOverride is not an architecture. Runtime checks failed.");
     }
 
-    fn get_return_address_register_name() -> String
+    fn get_register_name(reg: InterfaceRegister) -> String 
     {
         unimplemented!("NoArchitectureOverride is not an architecture. Runtime checks failed.");
-    }
-
-    /// Creates a new instance of the architecture
-    fn new() -> Self
-    where
-        Self: Sized,
-    {
-        Self
     }
 }
 
@@ -279,13 +285,13 @@ impl<Override: ArchitectureOverride> SupportedArchitecture<Override> {
         }
     }
 
-    pub fn get_return_address_register_name() -> String
+    pub fn get_register_name(&self, reg:InterfaceRegister) -> String
     {
         match self {
-            Self::Armv6M(a) => a.get_return_address_register_name(),
-            Self::Armv7EM(a) => a.get_return_address_register_name(),
-            Self::RISCV(a) => a.get_return_address_register_name(),
-            Self::Override(o) => o.get_return_address_register_name(),
+            Self::Armv6M(_) => <ArmV6M as Architecture<Override>>::get_register_name(reg),
+            Self::Armv7EM(_) => <ArmV7EM as Architecture<Override>>::get_register_name(reg),
+            Self::RISCV(_) => <RISCV as Architecture<Override>>::get_register_name(reg),
+            Self::Override(_) => Override::get_register_name(reg),
         }
     }
     

@@ -3,7 +3,7 @@
 use std::fmt::Display;
 
 use crate::{
-    arch::{ArchError, Architecture, ArchitectureOverride, SupportedArchitecture},
+    arch::{ArchError, Architecture, ArchitectureOverride, SupportedArchitecture, InterfaceRegister},
     executor::{
         hooks::HookContainer,
         instruction::Instruction,
@@ -52,10 +52,11 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
         unimplemented!();
     }
 
-    fn get_return_address_register_name() -> String
-    where
-    {
-        "X1".to_string()
+    fn get_register_name(reg:InterfaceRegister) -> String {
+        match reg {
+            InterfaceRegister::ProgramCounter => "PC",
+            InterfaceRegister::ReturnAddress => "X1"
+        }.to_string()
     }
     
     fn new() -> Self

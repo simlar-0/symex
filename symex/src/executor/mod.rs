@@ -28,6 +28,7 @@ use crate::{
     warn,
     Composition,
     Result,
+    arch::InterfaceRegister,
 };
 
 mod extension;
@@ -293,7 +294,7 @@ impl<'vm, C: Composition> GAExecutor<'vm, C> {
                 HookOrInstruction::PcHook(hook) => match hook {
                     PCHook::Continue => {
                         debug!("Continuing");
-                        let register_name = self.state.architecture.get_return_address_register_name();
+                        let register_name = self.state.architecture.get_register_name(InterfaceRegister::ReturnAddress);
                         let ra = self.state.get_register(register_name.to_owned()).unwrap();
                         self.state.set_register("PC".to_owned(), ra)?;
                         continue;
@@ -377,7 +378,7 @@ impl<'vm, C: Composition> GAExecutor<'vm, C> {
                 HookOrInstruction::PcHook(hook) => match hook {
                     PCHook::Continue => {
                         debug!("Continuing");
-                        let register_name = self.state.architecture.get_return_address_register_name();
+                        let register_name = self.state.architecture.get_register_name(InterfaceRegister::ReturnAddress);
                         let ra = self.state.get_register(register_name.to_owned()).unwrap();
                         self.state.set_register("PC".to_owned(), ra)?;
                         continue;
@@ -444,7 +445,7 @@ impl<'vm, C: Composition> GAExecutor<'vm, C> {
                 HookOrInstruction::PcHook(hook) => match hook {
                     PCHook::Continue => {
                         debug!("Continuing");
-                        let register_name = self.state.architecture.get_return_address_register_name();
+                        let register_name = self.state.architecture.get_register_name(InterfaceRegister::ReturnAddress);
                         let ra = self.state.get_register(register_name.to_owned()).unwrap();
                         self.state.set_register("PC".to_owned(), ra)?;
                         continue;
