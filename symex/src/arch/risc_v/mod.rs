@@ -4,8 +4,17 @@ use std::fmt::Display;
 
 use anyhow::Context;
 
+use disarmv7::Parse;
+use risc_v_disassembler::{
+    ParsedInstruction32,
+    Register,
+    DisassemblerError,
+};
+
 use crate::{
-    arch::{ArchError, Architecture, ArchitectureOverride, SupportedArchitecture, InterfaceRegister},
+    arch::{risc_v::decoder::InstructionToGAOperations, 
+        {ArchError, ParseError, Architecture, ArchitectureOverride, SupportedArchitecture, InterfaceRegister}
+    },
     executor::{
         hooks::{HookContainer, PCHook},
         instruction::Instruction,
@@ -16,6 +25,7 @@ use crate::{
     debug,
     project::dwarf_helper::SubProgramMap,
     Composition,
+    general_assembly::operation::Operation,
 };
 
 
@@ -30,7 +40,28 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
     type ISA = ();
     
     fn translate<C: Composition>(&self, buff: &[u8], state: &GAState<C>) -> Result<Instruction<C>, ArchError> {
-        unimplemented!();
+        let mut buffer = [0; 4];
+        for (source, dest) in buff[0..4].iter().zip(buffer.iter_mut()) {
+            *dest = *source;
+        }
+        trace!("decoding, buff : {:?}", buff);
+
+        let is_big_endian = false; // Default, should probably be set by the architecture discovery
+        let instr = risc_v_disassembler::parse(&buff, is_big_endian).map_err(|e| ArchError::ParsingError(e.into(), buffer));
+
+        debug!("PC{:#x} -> Running {:?}", state.memory.get_pc().unwrap().get_constant().unwrap(), instr);
+        let instr = instr?;
+        let timing = Self::cycle_count_hippomenes(&instr);
+        let ops: Vec<Operation> = Self::instruction_to_ga_operations(&self, &instr);
+
+        let instruction_size = 32; // Need to update the parser to make this automatic and robust
+
+        Ok(Instruction {
+            instruction_size: instruction_size as u32,
+            operations: ops,
+            max_cycle: timing,
+            memory_access: Self::memory_access(&instr),
+        })
     }
 
     fn add_hooks<C: crate::Composition>(&self, cfg: &mut HookContainer<C>, map: &mut SubProgramMap) {
@@ -126,9 +157,18 @@ impl Display for RISCV {
     }
 }
 
-impl From<risc_v_disassembler::DisassemblerError> for ArchError{
-    fn from(value: risc_v_disassembler::DisassemblerError) -> Self {
-        unimplemented!()
+impl From<DisassemblerError> for ParseError{
+    fn from(value: DisassemblerError) -> Self {
+        match value {
+            DisassemblerError::UnsupportedInstructionLength(_) => ParseError::InsufficientInput,
+            DisassemblerError::InvalidFunct3(_) => ParseError::MalfromedInstruction,
+            DisassemblerError::InvalidFunct7(_) => ParseError::MalfromedInstruction,
+            DisassemblerError::InvalidOpcode(_) => ParseError::InvalidInstruction,
+            DisassemblerError::InvalidImmediate(_) => ParseError::MalfromedInstruction,
+            DisassemblerError::InvalidRegister(_) => ParseError::InvalidRegister,
+            DisassemblerError::BitExtensionError(_) => ParseError::Generic("Bit extension error."),
+            DisassemblerError::BitExtractionError(_) => ParseError::Generic("Bit extraction error."),
+        }
     }
 }
 
