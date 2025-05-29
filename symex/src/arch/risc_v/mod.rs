@@ -26,6 +26,7 @@ use crate::{
     project::dwarf_helper::SubProgramMap,
     Composition,
     general_assembly::operation::Operation,
+    Endianness,
 };
 
 
@@ -45,8 +46,11 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
             *dest = *source;
         }
         trace!("decoding, buff : {:?}", buff);
-
-        let is_big_endian = false; // Default, should probably be set by the architecture discovery
+        let endianness = state.memory.program_memory().get_endianness();
+        let is_big_endian = match endianness {
+            Endianness::BigEndian => true,
+            Endianness::LittleEndian => false,
+        };
         let instr = risc_v_disassembler::parse(&buff, is_big_endian).map_err(|e| ArchError::ParsingError(e.into(), buffer));
 
         debug!("PC{:#x} -> Running {:?}", state.memory.get_pc().unwrap().get_constant().unwrap(), instr);
