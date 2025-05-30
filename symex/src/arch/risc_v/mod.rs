@@ -5,30 +5,22 @@ use std::fmt::Display;
 use anyhow::Context;
 
 use disarmv7::Parse;
-use risc_v_disassembler::{
-    ParsedInstruction32,
-    Register,
-    DisassemblerError,
-};
+use risc_v_disassembler::{DisassemblerError, ParsedInstruction32, Register};
 
 use crate::{
-    arch::{risc_v::decoder::InstructionToGAOperations, 
-        {ArchError, ParseError, Architecture, ArchitectureOverride, SupportedArchitecture, InterfaceRegister}
-    },
+    arch::{risc_v::decoder::InstructionToGAOperations, ArchError, Architecture, ArchitectureOverride, InterfaceRegister, ParseError, SupportedArchitecture},
+    debug,
     executor::{
         hooks::{HookContainer, PCHook},
         instruction::Instruction,
         state::GAState,
     },
-    smt::{SmtExpr, SmtMap},
-    trace,
-    debug,
-    project::dwarf_helper::SubProgramMap,
-    Composition,
     general_assembly::operation::Operation,
-    Endianness,
+    memory,
+    project::dwarf_helper::SubProgramMap,
+    smt::{ProgramMemory, SmtExpr, SmtMap},
+    trace, Composition, Endianness,
 };
-
 
 pub mod decoder;
 pub mod decoder_implementations;
@@ -39,7 +31,7 @@ pub struct RISCV {}
 
 impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
     type ISA = ();
-    
+
     fn translate<C: Composition>(&self, buff: &[u8], state: &GAState<C>) -> Result<Instruction<C>, ArchError> {
         let mut buffer = [0; 4];
         for (source, dest) in buff[0..4].iter().zip(buffer.iter_mut()) {
@@ -48,8 +40,8 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
         trace!("decoding, buff : {:?}", buff);
         let endianness = state.memory.program_memory().get_endianness();
         let is_big_endian = match endianness {
-            Endianness::BigEndian => true,
-            Endianness::LittleEndian => false,
+            Endianness::Big => true,
+            Endianness::Little => false,
         };
         let instr = risc_v_disassembler::parse(&buff, is_big_endian).map_err(|e| ArchError::ParsingError(e.into(), buffer));
 
@@ -140,13 +132,14 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
     {
     }
 
-    fn get_register_name(reg:InterfaceRegister) -> String {
+    fn get_register_name(reg: InterfaceRegister) -> String {
         match reg {
             InterfaceRegister::ProgramCounter => "PC",
-            InterfaceRegister::ReturnAddress => "X1"
-        }.to_string()
+            InterfaceRegister::ReturnAddress => "X1",
+        }
+        .to_string()
     }
-    
+
     fn new() -> Self
     where
         Self: Sized,
@@ -161,7 +154,7 @@ impl Display for RISCV {
     }
 }
 
-impl From<DisassemblerError> for ParseError{
+impl From<DisassemblerError> for ParseError {
     fn from(value: DisassemblerError) -> Self {
         match value {
             DisassemblerError::UnsupportedInstructionLength(_) => ParseError::InsufficientInput,
