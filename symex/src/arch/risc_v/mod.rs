@@ -115,9 +115,6 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
 
         // Writing to zero register should not change the state.
         let write_zero = |state: &mut GAState<C>, _value: C::SmtExpression| {
-            let size = state.current_instruction.as_ref().unwrap().instruction_size;
-            let zero = state.memory.from_u64(0u64, size);
-            state.memory.set_register("ZERO", zero);
             trace!("Writing to zero register, no effect");
             Ok(())
         };
