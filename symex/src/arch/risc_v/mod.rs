@@ -112,6 +112,23 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
         if let Err(_) = cfg.add_pc_hook_regex(map, r"^HardFault.*$", PCHook::EndFailure("Hardfault")) {
             trace!("Could not add hardfault hook");
         }
+
+        // Ensure that the zero register is always read as zero.
+        let read_zero = |state: &mut GAState<C>| {
+            let size = state.current_instruction.as_ref().unwrap().instruction_size;
+            let zero = state.memory.from_u64(0, size);
+            Ok(zero)
+        };
+        // Writing to zero register should not change the state.
+        let write_zero = |state: &mut GAState<C>, _value: C::SmtExpression| {
+            let size = state.current_instruction.as_ref().unwrap().instruction_size;
+            let zero = state.memory.from_u64(0u64, size);
+            state.memory.set_register("ZERO", zero);
+            Ok(())
+        };
+        cfg.add_register_read_hook("ZERO".to_owned(), read_zero);
+        cfg.add_register_write_hook("ZERO".to_owned(), write_zero);
+
     }
 
     fn pre_instruction_loading_hook<C>(state: &mut GAState<C>)
