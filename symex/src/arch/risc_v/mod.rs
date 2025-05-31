@@ -113,20 +113,14 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
             trace!("Could not add hardfault hook");
         }
 
-        // Ensure that the zero register is always read as zero.
-        let read_zero = |state: &mut GAState<C>| {
-            let size = state.current_instruction.as_ref().unwrap().instruction_size;
-            let zero = state.memory.from_u64(0, size);
-            Ok(zero)
-        };
         // Writing to zero register should not change the state.
         let write_zero = |state: &mut GAState<C>, _value: C::SmtExpression| {
             let size = state.current_instruction.as_ref().unwrap().instruction_size;
             let zero = state.memory.from_u64(0u64, size);
             state.memory.set_register("ZERO", zero);
+            trace!("Writing to zero register, no effect");
             Ok(())
         };
-        cfg.add_register_read_hook("ZERO".to_owned(), read_zero);
         cfg.add_register_write_hook("ZERO".to_owned(), write_zero);
 
     }
@@ -147,6 +141,8 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
     where
         C: Composition<ArchitectureOverride = Override>,
     {
+        trace!("Setting ZERO register to zero");
+        state.memory.set_register("ZERO", state.memory.from_u64(0, 32));
     }
 
     fn get_register_name(reg: InterfaceRegister) -> String {
