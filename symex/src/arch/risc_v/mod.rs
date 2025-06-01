@@ -121,20 +121,19 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
         };
         cfg.add_register_write_hook("ZERO".to_owned(), write_zero);
 
-        // Symex increments PC BEFORE executing the instruction, so we need to compensate for that
-        // We use the PC- register to do this
-        // We read and write to it and then pass the value to the PC register
+        // Symex increments PC BEFORE executing the instruction, which means that any instruction
+        // that reads PC is actually reading PC+4.
+        // To compensate for this, we need to tell our instructions to read from register "PC-" instead of "PC",
+        // and the hook below will then provide (PC+4-4) = PC.
 
-        let read_pc = |state: &mut GAState<C>| {
+        let pc_decrementer = |state: &mut GAState<C>| {
             let size = state.current_instruction.as_ref().unwrap().instruction_size / 8;
             let register = state.memory.get_pc()?.get_constant().unwrap();
             let new_pc = state.memory.from_u64(register - size as u64 - 4, state.memory.get_word_size()).simplify();
             Ok(new_pc)
         };
 
-        let write_pc = |state: &mut GAState<C>, value| state.set_register("PC", value);
-        cfg.add_register_read_hook("PC-".to_string(), read_pc);
-        cfg.add_register_write_hook("PC-".to_owned(), write_pc);
+        cfg.add_register_read_hook("PC-".to_string(), pc_decrementer);
     }
 
     fn pre_instruction_loading_hook<C>(state: &mut GAState<C>)

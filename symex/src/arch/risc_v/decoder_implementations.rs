@@ -14,6 +14,10 @@ use super::{
 };
 use crate::executor::instruction::Instruction as GAInstruction;
 
+// "PC-" is a workaround to get the current PC value, which is needed because Symex increments the
+// PC BEFORE executing the instruction.
+// "PC-" is handled by the hook "pc_decrementer", defined in the risc_v mod.
+
 impl InstructionToGAOperations for parsed_instructions::add {
     fn instruction_to_ga_operations(&self, instr: &ParsedInstruction32) -> Vec<GAOperation> {
         let rd = self.rd.local_into();
