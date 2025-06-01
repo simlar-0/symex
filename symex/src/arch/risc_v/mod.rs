@@ -113,6 +113,14 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
         if let Err(_) = cfg.add_pc_hook_regex(map, r"^HardFault.*$", PCHook::EndFailure("Hardfault")) {
             trace!("Could not add hardfault hook");
         }
+
+        // Writing to zero register should not change the state.
+        let write_zero = |state: &mut GAState<C>, _value: C::SmtExpression| {
+            trace!("Writing to zero register, no effect");
+            Ok(())
+        };
+        cfg.add_register_write_hook("ZERO".to_owned(), write_zero);
+
     }
 
     fn pre_instruction_loading_hook<C>(state: &mut GAState<C>)
@@ -131,6 +139,8 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
     where
         C: Composition<ArchitectureOverride = Override>,
     {
+        trace!("Setting ZERO register to zero");
+        state.memory.set_register("ZERO", state.memory.from_u64(0, 32));
     }
 
     fn get_register_name(reg: InterfaceRegister) -> String {
