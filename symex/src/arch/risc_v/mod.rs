@@ -127,9 +127,9 @@ impl<Override: ArchitectureOverride> Architecture<Override> for RISCV {
         // and the hook below will then provide (PC+4-4) = PC.
 
         let pc_decrementer = |state: &mut GAState<C>| {
-            let size = state.current_instruction.as_ref().unwrap().instruction_size / 8;
-            let register = state.memory.get_pc()?.get_constant().unwrap();
-            let new_pc = state.memory.from_u64(register - size as u64 - 4, state.memory.get_word_size()).simplify();
+            let instruction_length_in_bytes = state.current_instruction.as_ref().unwrap().instruction_size / 8;
+            let current_pc = state.memory.get_pc()?.get_constant().unwrap();
+            let new_pc = state.memory.from_u64(current_pc - instruction_length_in_bytes as u64, state.memory.get_word_size()).simplify();
             Ok(new_pc)
         };
 
