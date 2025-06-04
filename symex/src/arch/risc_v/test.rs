@@ -1,27 +1,17 @@
 #[cfg(test)]
 mod tests {
-    use disarmv7::prelude::{operation::*, *};
-    use general_assembly::{
-        operand::{DataWord, Operand},
-        operation::Operation as GAOperation,
-    };
+    use general_assembly::operand::{DataWord, Operand};
     use hashbrown::HashMap;
 
     use crate::{
-        arch::{risc_v::decoder::InstructionToGAOperations, Architecture, NoArchitectureOverride, RISCV},
+        arch::{Architecture, NoArchitectureOverride, RISCV},
         defaults::boolector::DefaultCompositionNoLogger,
-        executor::{
-            hooks::HookContainer,
-            instruction::{CycleCount, Instruction},
-            state::GAState,
-            vm::VM,
-            GAExecutor, ResultOrTerminate,
-        },
+        executor::{hooks::HookContainer, state::GAState, vm::VM, GAExecutor},
         logging::NoLogger,
         path_selection::PathSelector,
         project::{dwarf_helper::SubProgramMap, Project},
         smt::smt_boolector::Boolector,
-        smt::{bitwuzla::Bitwuzla, SmtExpr, SmtSolver},
+        smt::SmtSolver,
         Endianness, WordSize,
     };
 
