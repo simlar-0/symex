@@ -24,6 +24,75 @@ mod tests {
         instruction_bytes: [u8; 4],
         register1: TestRegister,
         register2: Option<TestRegister>,
+        register3: Option<TestRegister>,
+    }
+
+    macro_rules! generate_test_data {
+        // Three registers
+        (
+        $inst:expr,
+        ($reg1_name:expr, $reg1_initial:expr, $reg1_expected:expr),
+        ($reg2_name:expr, $reg2_initial:expr, $reg2_expected:expr),
+        ($reg3_name:expr, $reg3_initial:expr, $reg3_expected:expr)
+    ) => {{
+            TestData {
+                instruction_bytes: $inst,
+                register1: TestRegister {
+                    name: $reg1_name,
+                    initial_value: $reg1_initial,
+                    expected_value: $reg1_expected,
+                },
+                register2: Some(TestRegister {
+                    name: $reg2_name,
+                    initial_value: $reg2_initial,
+                    expected_value: $reg2_expected,
+                }),
+                register3: Some(TestRegister {
+                    name: $reg3_name,
+                    initial_value: $reg3_initial,
+                    expected_value: $reg3_expected,
+                }),
+            }
+        }};
+
+        // Two registers
+        (
+        $inst:expr,
+        ($reg1_name:expr, $reg1_initial:expr, $reg1_expected:expr),
+        ($reg2_name:expr, $reg2_initial:expr, $reg2_expected:expr)
+    ) => {{
+            TestData {
+                instruction_bytes: $inst,
+                register1: TestRegister {
+                    name: $reg1_name,
+                    initial_value: $reg1_initial,
+                    expected_value: $reg1_expected,
+                },
+                register2: Some(TestRegister {
+                    name: $reg2_name,
+                    initial_value: $reg2_initial,
+                    expected_value: $reg2_expected,
+                }),
+                register3: None,
+            }
+        }};
+
+        // One register
+        (
+        $inst:expr,
+        ($reg1_name:expr, $reg1_initial:expr, $reg1_expected:expr)
+    ) => {{
+            TestData {
+                instruction_bytes: $inst,
+                register1: TestRegister {
+                    name: $reg1_name,
+                    initial_value: $reg1_initial,
+                    expected_value: $reg1_expected,
+                },
+                register2: None,
+                register3: None,
+            }
+        }};
     }
 
     fn setup_test_vm() -> VM<DefaultCompositionNoLogger> {
@@ -55,7 +124,7 @@ mod tests {
         executor.execute_operation(&operation, &mut crate::logging::NoLogger).expect("Malformed test");
     }
 
-    fn run_test<'a>(vm: &'a mut VM<DefaultCompositionNoLogger>, instruction_bytes: [u8; 4], test_data: &'a TestData) -> (GAState<DefaultCompositionNoLogger>) {
+    fn run_test<'a>(vm: &'a mut VM<DefaultCompositionNoLogger>, instruction_bytes: [u8; 4], test_data: &'a TestData) -> (GAExecutor<'a, DefaultCompositionNoLogger>) {
         let project = vm.project;
 
         let mut state = vm.paths.get_path().unwrap().state;
@@ -67,9 +136,12 @@ mod tests {
         if let Some(register2) = &test_data.register2 {
             initiate_test_register(&mut executor, register2.name, register2.initial_value);
         }
+        if let Some(register3) = &test_data.register3 {
+            initiate_test_register(&mut executor, register3.name, register3.initial_value);
+        }
         executor.execute_instruction(&instruction, &mut crate::logging::NoLogger);
 
-        executor.state
+        executor
     }
 
     fn assert_results(test_data: &TestData, final_state: &mut GAState<DefaultCompositionNoLogger>) {
@@ -90,44 +162,41 @@ mod tests {
                 register2.name
             );
         }
+
+        if let Some(register3) = &test_data.register3 {
+            let reg3_value = final_state.get_register(register3.name).expect("Register not found");
+            assert_eq!(
+                reg3_value.get_constant().unwrap(),
+                register3.expected_value as u64,
+                "Register {} did not match expected value",
+                register3.name
+            );
+        }
     }
 
     #[test]
     fn test_add() {
-        let test_data = TestData {
-            instruction_bytes: 0x00B50533u32.to_le_bytes(), // Example instruction bytes for an ADDI
-            register1: TestRegister {
-                name: "A0",
-                initial_value: 0x01,
-                expected_value: 0x02,
-            },
-            register2: Some(TestRegister {
-                name: "A1",
-                initial_value: 0x01,
-                expected_value: 0x01,
-            }),
-        };
-
+        let test_data = generate_test_data!(0x00B50533u32.to_le_bytes(), ("A0", 0x01, 0x02), ("A1", 0x01, 0x01));
         let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data);
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
 
         assert_results(&test_data, &mut final_state);
     }
 
     #[test]
-    fn test_addi() {
-        let test_data = TestData {
-            instruction_bytes: 0x00A50513u32.to_le_bytes(),
-            register1: TestRegister {
-                name: "A0",
-                initial_value: 0x01,
-                expected_value: 0x01 + 10,
-            },
-            register2: None,
-        };
+    fn test_sub() {
+        let test_data = generate_test_data!(0x40B50533u32.to_le_bytes(), ("A0", 25, 0x06), ("A1", 19, 19));
 
         let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data);
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+    }
+
+    #[test]
+    fn test_addi() {
+        let test_data = generate_test_data!(0x00A50513u32.to_le_bytes(), ("A0", 0x01, 0x01 + 10));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
 
         assert_results(&test_data, &mut final_state);
     }
