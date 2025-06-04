@@ -123,4 +123,22 @@ mod tests {
 
         assert_results(&test_data, &mut final_state);
     }
+
+    #[test]
+    fn test_addi() {
+        let test_data = TestData {
+            instruction_bytes: 0x00A50513u32.to_le_bytes(),
+            register1: TestRegister {
+                name: "A0",
+                initial_value: 0x01,
+                expected_value: 0x01 + 10,
+            },
+            register2: None,
+        };
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data);
+
+        assert_results(&test_data, &mut final_state);
+    }
 }
