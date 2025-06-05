@@ -234,8 +234,8 @@ mod tests {
     }
 
     #[test]
-    fn test_or_0_0() {
-        let test_data = generate_test_data!(0x00B56533u32.to_le_bytes(), ("A0", 0x0, 0x0), ("A1", 0x0, 0x0));
+    fn test_or() {
+        let test_data = generate_test_data!(0x00B56533u32.to_le_bytes(), ("A0", 0b0110111, 0b0111111), ("A1", 0b0001111, 0b0001111));
 
         let mut vm = setup_test_vm();
         let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
@@ -244,38 +244,8 @@ mod tests {
     }
 
     #[test]
-    fn test_or_0_1() {
-        let test_data = generate_test_data!(0x00B56533u32.to_le_bytes(), ("A0", 0x0, 0x1), ("A1", 0x1, 0x1));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
-    }
-
-    #[test]
-    fn test_and_0_0() {
-        let test_data = generate_test_data!(0x00B57533u32.to_le_bytes(), ("A0", 0x0, 0x0), ("A1", 0x0, 0x0));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
-    }
-
-    #[test]
-    fn test_and_1_0() {
-        let test_data = generate_test_data!(0x00B57533u32.to_le_bytes(), ("A0", 0x1, 0x0), ("A1", 0x0, 0x0));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
-    }
-
-    #[test]
-    fn test_and_1_1() {
-        let test_data = generate_test_data!(0x00B57533u32.to_le_bytes(), ("A0", 0x1, 0x1), ("A1", 0x1, 0x1));
+    fn test_and() {
+        let test_data = generate_test_data!(0x00B57533u32.to_le_bytes(), ("A0", 0b0110111, 0b0000111), ("A1", 0b0001111, 0b0001111));
 
         let mut vm = setup_test_vm();
         let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
@@ -366,6 +336,26 @@ mod tests {
     #[test]
     fn test_xori() {
         let test_data = generate_test_data!(0x00A54513u32.to_le_bytes(), ("A0", 0xf12, 0xf18));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_ori() {
+        let test_data = generate_test_data!(0x00f56513u32.to_le_bytes(), ("A0", 0b0110111, 0b0111111));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_andi() {
+        let test_data = generate_test_data!(0x00f57513u32.to_le_bytes(), ("A0", 0b0110111, 0b0000111));
 
         let mut vm = setup_test_vm();
         let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
