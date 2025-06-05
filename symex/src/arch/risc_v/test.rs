@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_slt() {
-        let test_data = generate_test_data!(0x00B52533u32.to_le_bytes(), ("A0", 3, 1), ("A1", 5, 5));
+        let test_data = generate_test_data!(0x00B52533u32.to_le_bytes(), ("A0", (-25i32) as u32, 1), ("A1", 5, 5));
 
         let mut vm = setup_test_vm();
         let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
@@ -206,6 +206,46 @@ mod tests {
     #[test]
     fn test_sltu() {
         let test_data = generate_test_data!(0x00B53533u32.to_le_bytes(), ("A0", 3, 1), ("A1", 5, 5));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_sltu_signed() {
+        let test_data = generate_test_data!(0x00B53533u32.to_le_bytes(), ("A0", (-25i32) as u32, 0), ("A1", 5, 5));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_xor() {
+        let test_data = generate_test_data!(0x00B54533u32.to_le_bytes(), ("A0", 13, 21), ("A1", 24, 24));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_or_0() {
+        let test_data = generate_test_data!(0x00B56533u32.to_le_bytes(), ("A0", 0x0, 0x0), ("A1", 0x0, 0x0));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_or_1() {
+        let test_data = generate_test_data!(0x00B56533u32.to_le_bytes(), ("A0", 0x0, 0x1), ("A1", 0x1, 0x1));
 
         let mut vm = setup_test_vm();
         let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
