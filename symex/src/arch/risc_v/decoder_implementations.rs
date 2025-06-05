@@ -587,8 +587,8 @@ impl InstructionToGAOperations for parsed_instructions::jal {
             imm:u32;
 
             let target = pc + imm;
-            Jump(target);
             rd = pc + 4u32;
+            Jump(target);
         ])
     }
 }
