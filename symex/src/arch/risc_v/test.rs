@@ -400,37 +400,66 @@ mod tests {
 
     #[test]
     fn test_lb() {
-        let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 0xef as u8 as i8 as i32 as u32), ("A1", 4, 4)); // Hacky method for sign extension
+        let test_data = generate_test_data!(
+            0x00e58503u32.to_le_bytes(),
+            ("A0", 0, 0xef as u8 as i8 as i32 as u32),
+            ("A1", (-4i32 as u32), (-4i32 as u32))
+        ); // Hacky method for sign extension
 
-        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+        run_test_with_mem(&test_data, 10i32 as u32, 0xdeadbeef, 0xdeadbeef);
     }
 
     #[test]
     fn test_lh() {
-        let test_data = generate_test_data!(0x00e59503u32.to_le_bytes(), ("A0", 0, 0xbeef as u16 as i16 as i32 as u32), ("A1", 4, 4)); // Hacky method for sign extension
+        let test_data = generate_test_data!(
+            0x00e59503u32.to_le_bytes(),
+            ("A0", 0, 0xbeef as u16 as i16 as i32 as u32),
+            ("A1", (-4i32 as u32), (-4i32 as u32))
+        ); // Hacky method for sign extension
 
-        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+        run_test_with_mem(&test_data, 10i32 as u32, 0xdeadbeef, 0xdeadbeef);
     }
 
     #[test]
     fn test_lw() {
-        let test_data = generate_test_data!(0x00e5a503u32.to_le_bytes(), ("A0", 0, 0xdeadbeef), ("A1", 4, 4));
+        let test_data = generate_test_data!(0x00e5a503u32.to_le_bytes(), ("A0", 0, 0xdeadbeef), ("A1", (-4i32 as u32), (-4i32 as u32)));
 
-        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+        run_test_with_mem(&test_data, 10i32 as u32, 0xdeadbeef, 0xdeadbeef);
     }
 
     #[test]
     fn test_lbu() {
-        let test_data = generate_test_data!(0x00e5c503u32.to_le_bytes(), ("A0", 0, 0xef as u32), ("A1", 4, 4));
+        let test_data = generate_test_data!(0x00e5c503u32.to_le_bytes(), ("A0", 0, 0xef as u32), ("A1", (-4i32 as u32), (-4i32 as u32)));
 
-        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+        run_test_with_mem(&test_data, 10i32 as u32, 0xdeadbeef, 0xdeadbeef);
     }
 
     #[test]
     fn test_lhu() {
-        let test_data = generate_test_data!(0x00e5d503u32.to_le_bytes(), ("A0", 0, 0xbeef as u32), ("A1", 4, 4));
+        let test_data = generate_test_data!(0x00e5d503u32.to_le_bytes(), ("A0", 0, 0xbeef as u32), ("A1", (-4i32 as u32), (-4i32 as u32)));
 
-        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+        run_test_with_mem(&test_data, 10i32 as u32, 0xdeadbeef, 0xdeadbeef);
+    }
+
+    #[test]
+    fn test_sb() {
+        let test_data = generate_test_data!(0x00a58723u32.to_le_bytes(), ("A0", 0xef, 0xef), ("A1", (-4i32 as u32), (-4i32 as u32)));
+
+        run_test_with_mem(&test_data, 10i32 as u32, 0x0, 0xef);
+    }
+
+    #[test]
+    fn test_sh() {
+        let test_data = generate_test_data!(0x00a59723u32.to_le_bytes(), ("A0", 0xbeef, 0xbeef), ("A1", (-4i32 as u32), (-4i32 as u32)));
+
+        run_test_with_mem(&test_data, 10i32 as u32, 0x0, 0xbeef);
+    }
+
+    #[test]
+    fn test_sw() {
+        let test_data = generate_test_data!(0x00a5a723u32.to_le_bytes(), ("A0", 0xdeadbeef, 0xdeadbeef), ("A1", (-4i32 as u32), (-4i32 as u32)));
+
+        run_test_with_mem(&test_data, 10i32 as u32, 0x0, 0xdeadbeef);
     }
 
     #[test]
@@ -627,4 +656,3 @@ mod tests {
         run_test_no_mem(&test_data);
     }
 }
-
