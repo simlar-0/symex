@@ -6,12 +6,14 @@ mod tests {
     use crate::{
         arch::{Architecture, NoArchitectureOverride, RISCV},
         defaults::boolector::DefaultCompositionNoLogger,
-        executor::{hooks::HookContainer, state::GAState, vm::VM, GAExecutor},
+        executor::{hooks::HookContainer, instruction::Instruction, state::GAState, vm::VM, GAExecutor},
         logging::NoLogger,
         path_selection::PathSelector,
         project::{dwarf_helper::SubProgramMap, Project},
-        smt::smt_boolector::Boolector,
-        smt::SmtSolver,
+        smt::{
+            smt_boolector::{Boolector, BoolectorExpr},
+            SmtSolver,
+        },
         Endianness, WordSize,
     };
 
@@ -114,7 +116,32 @@ mod tests {
         VM::new_test_vm(project, state, NoLogger).unwrap()
     }
 
-    fn initiate_test_register(executor: &mut GAExecutor<'_, DefaultCompositionNoLogger>, reg: &str, value: u32) {
+    fn translate_instruction(instruction_bytes: [u8; 4]) -> Instruction<DefaultCompositionNoLogger> {
+        let mut vm = setup_test_vm();
+        let mut state = vm.paths.get_path().unwrap().state;
+
+        RISCV {}.translate(&instruction_bytes, &state.clone()).expect("Failed to translate instruction")
+    }
+
+    fn init_executor(vm: &mut VM<DefaultCompositionNoLogger>) -> GAExecutor<'_, DefaultCompositionNoLogger> {
+        let project = vm.project;
+
+        let mut state = vm.paths.get_path().unwrap().state;
+
+        GAExecutor::from_state(state, vm, project)
+    }
+
+    fn init_registers<'a>(executor: &'a mut GAExecutor<'_, DefaultCompositionNoLogger>, instruction: Instruction<DefaultCompositionNoLogger>, test_data: &'a TestData) {
+        init_test_register(executor, test_data.register1.name, test_data.register1.initial_value);
+        if let Some(register2) = &test_data.register2 {
+            init_test_register(executor, register2.name, register2.initial_value);
+        }
+        if let Some(register3) = &test_data.register3 {
+            init_test_register(executor, register3.name, register3.initial_value);
+        }
+    }
+
+    fn init_test_register(executor: &mut GAExecutor<'_, DefaultCompositionNoLogger>, reg: &str, value: u32) {
         let register_operand = Operand::Register(reg.to_string());
         let immediate_operand = Operand::Immediate(DataWord::Word32(value));
         let operation = general_assembly::operation::Operation::Move {
@@ -124,27 +151,7 @@ mod tests {
         executor.execute_operation(&operation, &mut crate::logging::NoLogger).expect("Malformed test");
     }
 
-    fn run_test<'a>(vm: &'a mut VM<DefaultCompositionNoLogger>, instruction_bytes: [u8; 4], test_data: &'a TestData) -> (GAExecutor<'a, DefaultCompositionNoLogger>) {
-        let project = vm.project;
-
-        let mut state = vm.paths.get_path().unwrap().state;
-
-        let instruction = RISCV {}.translate(&instruction_bytes, &state.clone()).expect("Failed to translate instruction");
-        let mut executor = GAExecutor::from_state(state, vm, project);
-
-        initiate_test_register(&mut executor, test_data.register1.name, test_data.register1.initial_value);
-        if let Some(register2) = &test_data.register2 {
-            initiate_test_register(&mut executor, register2.name, register2.initial_value);
-        }
-        if let Some(register3) = &test_data.register3 {
-            initiate_test_register(&mut executor, register3.name, register3.initial_value);
-        }
-        executor.execute_instruction(&instruction, &mut crate::logging::NoLogger);
-
-        executor
-    }
-
-    fn assert_results(test_data: &TestData, final_state: &mut GAState<DefaultCompositionNoLogger>) {
+    fn assert_registers(test_data: &TestData, final_state: &mut GAState<DefaultCompositionNoLogger>) {
         let reg1_value = final_state.get_register(test_data.register1.name).expect("Register not found");
         assert_eq!(
             reg1_value.get_constant().unwrap(),
@@ -174,277 +181,259 @@ mod tests {
         }
     }
 
+    fn init_memory(executor: &mut GAExecutor<'_, DefaultCompositionNoLogger>, mem_addr: u32, value: u32) {
+        let load_addr_in_addr = general_assembly::operation::Operation::Add {
+            destination: Operand::Local("ADDR".to_owned()),
+            operand1: Operand::Register("ZERO".to_owned()),
+            operand2: Operand::Immediate(DataWord::Word32(mem_addr)),
+        };
+        let load_imm_in_temp = general_assembly::operation::Operation::Add {
+            destination: Operand::Local("TEMP".to_owned()),
+            operand1: Operand::Register("ZERO".to_owned()),
+            operand2: Operand::Immediate(DataWord::Word32(value)),
+        };
+        let save_into_mem = general_assembly::operation::Operation::Move {
+            destination: Operand::AddressInLocal("ADDR".to_owned(), 32),
+            source: Operand::Local("TEMP".to_owned()),
+        };
+
+        executor
+            .execute_operation(&load_addr_in_addr, &mut crate::logging::NoLogger)
+            .expect("Failed to load address into ADDR");
+        executor
+            .execute_operation(&load_imm_in_temp, &mut crate::logging::NoLogger)
+            .expect("Failed to load immediate into TEMP");
+        executor
+            .execute_operation(&save_into_mem, &mut crate::logging::NoLogger)
+            .expect("Failed to save TEMP into memory");
+    }
+
+    fn assert_memory(mem_addr: u32, expected_value: u32, executor: &mut GAExecutor<'_, DefaultCompositionNoLogger>) {
+        let load_addr_in_addr = general_assembly::operation::Operation::Add {
+            destination: Operand::Local("ADDR".to_owned()),
+            operand1: Operand::Register("ZERO".to_owned()),
+            operand2: Operand::Immediate(DataWord::Word32(mem_addr)),
+        };
+        let read_from_mem_into_temp = general_assembly::operation::Operation::Move {
+            destination: Operand::Local("TEMP".to_owned()),
+            source: Operand::Local("ADDR".to_owned()),
+        };
+
+        executor
+            .execute_operation(&load_addr_in_addr, &mut crate::logging::NoLogger)
+            .expect("Failed to load address into ADDR");
+        executor
+            .execute_operation(&read_from_mem_into_temp, &mut crate::logging::NoLogger)
+            .expect("Failed to read from memory into TEMP");
+
+        let temp = executor.state.get_register("TEMP".to_owned()).expect("Register not found");
+
+        assert_eq!(
+            temp.get_constant().unwrap(),
+            expected_value as u64,
+            "Memory at address {} did not match expected value",
+            mem_addr
+        );
+    }
+
+    fn run_test_no_mem(test_data: &TestData) {
+        let mut vm = setup_test_vm();
+        let mut executor = init_executor(&mut vm);
+        let instruction = translate_instruction(test_data.instruction_bytes);
+        init_registers(&mut executor, instruction.clone(), test_data);
+        executor.execute_instruction(&instruction, &mut crate::logging::NoLogger);
+        let mut final_state = executor.state;
+        assert_registers(test_data, &mut final_state);
+    }
+
+    // fn run_test_with_mem(test_data: &TestData, mem_addr: u32, init_value: u32, expected_value: u32) {
+    //     let mut vm = setup_test_vm();
+    //     let mut executor = init_executor(&mut vm);
+    //     let instruction = translate_instruction(test_data.instruction_bytes);
+    //     init_registers(&mut executor, instruction.clone(), test_data);
+    //     init_memory(&mut executor, mem_addr, value);
+    //     executor.execute_instruction(&instruction, &mut crate::logging::NoLogger);
+    //     let mut final_state = executor.state;
+    //     assert_registers(test_data, &mut final_state);
+    //     assert_memory(mem_addr, value, &mut executor);
+    // }
+    //
     #[test]
     fn test_add() {
         let test_data = generate_test_data!(0x00B50533u32.to_le_bytes(), ("A0", 0x01, 0x02), ("A1", 0x01, 0x01));
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sub() {
         let test_data = generate_test_data!(0x40B50533u32.to_le_bytes(), ("A0", 25, 0x06), ("A1", 19, 19));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_slt() {
         let test_data = generate_test_data!(0x00B52533u32.to_le_bytes(), ("A0", (-25i32) as u32, 1), ("A1", 5, 5));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sltu() {
         let test_data = generate_test_data!(0x00B53533u32.to_le_bytes(), ("A0", 3, 1), ("A1", 5, 5));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sltu_signed() {
         let test_data = generate_test_data!(0x00B53533u32.to_le_bytes(), ("A0", (-25i32) as u32, 0), ("A1", 5, 5));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_xor() {
         let test_data = generate_test_data!(0x00B54533u32.to_le_bytes(), ("A0", 13, 21), ("A1", 24, 24));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_or() {
         let test_data = generate_test_data!(0x00B56533u32.to_le_bytes(), ("A0", 0b0110111, 0b0111111), ("A1", 0b0001111, 0b0001111));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_and() {
         let test_data = generate_test_data!(0x00B57533u32.to_le_bytes(), ("A0", 0b0110111, 0b0000111), ("A1", 0b0001111, 0b0001111));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_srl() {
         let test_data = generate_test_data!(0x00B55533u32.to_le_bytes(), ("A0", 0b01111001, 0b00011110), ("A1", 0x02, 0x02));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sra_leading_0() {
         let test_data = generate_test_data!(0x40B55533u32.to_le_bytes(), ("A0", 0b01111001, 0b00011110), ("A1", 0x02, 0x02));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sra_leading_1() {
         let test_data = generate_test_data!(0x40B55533u32.to_le_bytes(), ("A0", 0xf0000000, 0xffffffff), ("A1", 31, 31));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sll() {
         let test_data = generate_test_data!(0x00B51533u32.to_le_bytes(), ("A0", 0b01111001, 0x1e400000), ("A1", 22, 22));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_addi() {
         let test_data = generate_test_data!(0x00A50513u32.to_le_bytes(), ("A0", 0x01, 0x01 + 10));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_slti() {
         let test_data = generate_test_data!(0x00A52513u32.to_le_bytes(), ("A0", (-25i32) as u32, 1));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sltiu() {
         let test_data = generate_test_data!(0x00A53513u32.to_le_bytes(), ("A0", 3, 1));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_sltiu_signed() {
         let test_data = generate_test_data!(0x00A53513u32.to_le_bytes(), ("A0", (-25i32) as u32, 0));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_xori() {
         let test_data = generate_test_data!(0x00A54513u32.to_le_bytes(), ("A0", 0xf12, 0xf18));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_ori() {
         let test_data = generate_test_data!(0x00f56513u32.to_le_bytes(), ("A0", 0b0110111, 0b0111111));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_andi() {
         let test_data = generate_test_data!(0x00f57513u32.to_le_bytes(), ("A0", 0b0110111, 0b0000111));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_slli() {
         let test_data = generate_test_data!(0x00451513u32.to_le_bytes(), ("A0", 0b01111001, 0b011110010000));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_srli() {
         let test_data = generate_test_data!(0x00455513u32.to_le_bytes(), ("A0", 0b01111001, 0b0111));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn teat_srai_leading_0() {
         let test_data = generate_test_data!(0x40455513u32.to_le_bytes(), ("A0", 0b01111001, 0b0111));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_srai_leading_1() {
         let test_data = generate_test_data!(0x40455513u32.to_le_bytes(), ("A0", 0xf0000000, 0xff000000));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
+
+    // #[test]
+    // fn test_lb() {
+    //     let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 382), ("A1", 4, 4));
+    //
+    //     let mut vm = setup_test_vm();
+    //     let mut executor = init_registers(&mut vm, test_data.instruction_bytes, &test_data);
+    //     init_memory(&mut executor, 18i32 as u32, 382);
+    //
+    //     assert_registers(&test_data, &mut executor.state);
+    // }
+    //
 
     #[test]
     fn test_beq_ne() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b50c63u32.to_le_bytes(), ("A0", 0x01, 0x01), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_beq_eq() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b50c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_bne_ne() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b51c63u32.to_le_bytes(), ("A0", 0x01, 0x01), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_bne_eq() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b51c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -456,22 +445,14 @@ mod tests {
             ("A1", (-25i32) as u32, (-25i32) as u32),
             ("PC", start_PC, start_PC + 4)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_blt_eq() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b54c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -483,11 +464,7 @@ mod tests {
             ("A1", 5, 5),
             ("PC", start_PC, start_PC + 24)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -499,22 +476,14 @@ mod tests {
             ("A1", (-25i32) as u32, (-25i32) as u32),
             ("PC", start_PC, start_PC + 24)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_bge_eq() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b55c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -526,11 +495,7 @@ mod tests {
             ("A1", 5, 5),
             ("PC", start_PC, start_PC + 4)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -542,22 +507,14 @@ mod tests {
             ("A1", 10, 10),
             ("PC", start_PC, start_PC + 4)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_bltu_eq() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b56c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -569,11 +526,7 @@ mod tests {
             ("A1", (-25i32) as u32, (-25i32) as u32), //Unsigned interpretation: [(-25i32) = 11100111u32] > 10
             ("PC", start_PC, start_PC + 24)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -585,22 +538,14 @@ mod tests {
             ("A1", 10, 10),
             ("PC", start_PC, start_PC + 24)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_bgeu_eq() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b57c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
@@ -612,43 +557,27 @@ mod tests {
             ("A1", (-25i32) as u32, (-25i32) as u32), //Unsigned interpretation: [(-25i32) = 11100111u32] > 10
             ("PC", start_PC, start_PC + 4)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_jal() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x0100056fu32.to_le_bytes(), ("A0", 0x0, start_PC + 4), ("PC", start_PC, start_PC + 16));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_lui() {
         let test_data = generate_test_data!(0x03039537u32.to_le_bytes(), ("A0", 65829842, 12345 << 12));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     #[test]
     fn test_auipc() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00018517u32.to_le_bytes(), ("A0", 64763252, start_PC + (24 << 12)), ("PC", start_PC, start_PC + 4));
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 
     // Jump to an address formed by adding xs1 to a signed offset
@@ -670,10 +599,6 @@ mod tests {
             ("A1", xs1 as u32, xs1 as u32),
             ("PC", start_PC as u32, address as u32)
         );
-
-        let mut vm = setup_test_vm();
-        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
-
-        assert_results(&test_data, &mut final_state);
+        run_test_no_mem(&test_data);
     }
 }
