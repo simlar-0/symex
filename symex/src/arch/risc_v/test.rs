@@ -400,9 +400,23 @@ mod tests {
 
     #[test]
     fn test_lb() {
-        let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 0xd), ("A1", 4, 4));
+        let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 0xef as u8 as i8 as i32 as u32), ("A1", 4, 4)); // Hacky method for sign extension
 
-        run_test_with_mem(&test_data, 18i32 as u32, 0xfe0d, 0xfe0d);
+        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+    }
+
+    #[test]
+    fn test_lh() {
+        let test_data = generate_test_data!(0x00e59503u32.to_le_bytes(), ("A0", 0, 0xbeef as u16 as i16 as i32 as u32), ("A1", 4, 4)); // Hacky method for sign extension
+
+        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+    }
+
+    #[test]
+    fn test_lw() {
+        let test_data = generate_test_data!(0x00e5a503u32.to_le_bytes(), ("A0", 0, 0xdeadbeef), ("A1", 4, 4));
+
+        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
     }
 
     #[test]
@@ -599,3 +613,4 @@ mod tests {
         run_test_no_mem(&test_data);
     }
 }
+
