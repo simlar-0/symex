@@ -151,7 +151,9 @@ mod tests {
         executor.execute_operation(&operation, &mut crate::logging::NoLogger).expect("Malformed test");
     }
 
-    fn assert_registers(test_data: &TestData, final_state: &mut GAState<DefaultCompositionNoLogger>) {
+    fn assert_registers(test_data: &TestData, executor: &mut GAExecutor<'_, DefaultCompositionNoLogger>) {
+        let mut final_state = &mut executor.state;
+
         let reg1_value = final_state.get_register(test_data.register1.name).expect("Register not found");
         assert_eq!(
             reg1_value.get_constant().unwrap(),
@@ -237,27 +239,27 @@ mod tests {
     }
 
     fn run_test_no_mem(test_data: &TestData) {
+        let instruction = translate_instruction(test_data.instruction_bytes);
         let mut vm = setup_test_vm();
         let mut executor = init_executor(&mut vm);
-        let instruction = translate_instruction(test_data.instruction_bytes);
         init_registers(&mut executor, instruction.clone(), test_data);
         executor.execute_instruction(&instruction, &mut crate::logging::NoLogger);
-        let mut final_state = executor.state;
-        assert_registers(test_data, &mut final_state);
+
+        assert_registers(test_data, &mut executor);
     }
 
-    // fn run_test_with_mem(test_data: &TestData, mem_addr: u32, init_value: u32, expected_value: u32) {
-    //     let mut vm = setup_test_vm();
-    //     let mut executor = init_executor(&mut vm);
-    //     let instruction = translate_instruction(test_data.instruction_bytes);
-    //     init_registers(&mut executor, instruction.clone(), test_data);
-    //     init_memory(&mut executor, mem_addr, value);
-    //     executor.execute_instruction(&instruction, &mut crate::logging::NoLogger);
-    //     let mut final_state = executor.state;
-    //     assert_registers(test_data, &mut final_state);
-    //     assert_memory(mem_addr, value, &mut executor);
-    // }
-    //
+    fn run_test_with_mem(test_data: &TestData, mem_addr: u32, init_value: u32, expected_value: u32) {
+        let instruction = translate_instruction(test_data.instruction_bytes);
+        let mut vm = setup_test_vm();
+        let mut executor = init_executor(&mut vm);
+        init_registers(&mut executor, instruction.clone(), test_data);
+        init_memory(&mut executor, mem_addr, init_value);
+        executor.execute_instruction(&instruction, &mut crate::logging::NoLogger);
+
+        assert_memory(mem_addr, expected_value, &mut executor);
+        assert_registers(test_data, &mut executor);
+    }
+
     #[test]
     fn test_add() {
         let test_data = generate_test_data!(0x00B50533u32.to_le_bytes(), ("A0", 0x01, 0x02), ("A1", 0x01, 0x01));
@@ -396,17 +398,12 @@ mod tests {
         run_test_no_mem(&test_data);
     }
 
-    // #[test]
-    // fn test_lb() {
-    //     let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 382), ("A1", 4, 4));
-    //
-    //     let mut vm = setup_test_vm();
-    //     let mut executor = init_registers(&mut vm, test_data.instruction_bytes, &test_data);
-    //     init_memory(&mut executor, 18i32 as u32, 382);
-    //
-    //     assert_registers(&test_data, &mut executor.state);
-    // }
-    //
+    #[test]
+    fn test_lb() {
+        let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 382), ("A1", 4, 4));
+
+        run_test_with_mem(&test_data, 18i32 as u32, 382, 382);
+    }
 
     #[test]
     fn test_beq_ne() {
