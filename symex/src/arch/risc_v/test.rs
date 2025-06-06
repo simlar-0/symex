@@ -420,6 +420,20 @@ mod tests {
     }
 
     #[test]
+    fn test_lbu() {
+        let test_data = generate_test_data!(0x00e5c503u32.to_le_bytes(), ("A0", 0, 0xef as u32), ("A1", 4, 4));
+
+        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+    }
+
+    #[test]
+    fn test_lhu() {
+        let test_data = generate_test_data!(0x00e5d503u32.to_le_bytes(), ("A0", 0, 0xbeef as u32), ("A1", 4, 4));
+
+        run_test_with_mem(&test_data, 18i32 as u32, 0xdeadbeef, 0xdeadbeef);
+    }
+
+    #[test]
     fn test_beq_ne() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x00b50c63u32.to_le_bytes(), ("A0", 0x01, 0x01), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
