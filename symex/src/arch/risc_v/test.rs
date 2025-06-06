@@ -404,9 +404,251 @@ mod tests {
     }
 
     #[test]
+    fn test_beq_ne() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b50c63u32.to_le_bytes(), ("A0", 0x01, 0x01), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_beq_eq() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b50c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bne_ne() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b51c63u32.to_le_bytes(), ("A0", 0x01, 0x01), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bne_eq() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b51c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_blt_gt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b54c63u32.to_le_bytes(),
+            ("A0", 10, 10),
+            ("A1", (-25i32) as u32, (-25i32) as u32),
+            ("PC", start_PC, start_PC + 4)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_blt_eq() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b54c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_blt_lt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b54c63u32.to_le_bytes(),
+            ("A0", (-25i32) as u32, (-25i32) as u32),
+            ("A1", 5, 5),
+            ("PC", start_PC, start_PC + 24)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bge_gt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b55c63u32.to_le_bytes(),
+            ("A0", 10, 10),
+            ("A1", (-25i32) as u32, (-25i32) as u32),
+            ("PC", start_PC, start_PC + 24)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bge_eq() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b55c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bge_lt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b55c63u32.to_le_bytes(),
+            ("A0", (-25i32) as u32, (-25i32) as u32),
+            ("A1", 5, 5),
+            ("PC", start_PC, start_PC + 4)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bltu_gt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b56c63u32.to_le_bytes(),
+            ("A0", (-25i32) as u32, (-25i32) as u32), //Unsigned interpretation: [(-25i32) = 11100111u32] > 10
+            ("A1", 10, 10),
+            ("PC", start_PC, start_PC + 4)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bltu_eq() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b56c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 4));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bltu_lt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b56c63u32.to_le_bytes(),
+            ("A0", 10, 10),
+            ("A1", (-25i32) as u32, (-25i32) as u32), //Unsigned interpretation: [(-25i32) = 11100111u32] > 10
+            ("PC", start_PC, start_PC + 24)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bgeu_gt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b57c63u32.to_le_bytes(),
+            ("A0", (-25i32) as u32, (-25i32) as u32), //Unsigned interpretation: [(-25i32) = 11100111u32] > 10
+            ("A1", 10, 10),
+            ("PC", start_PC, start_PC + 24)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bgeu_eq() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00b57c63u32.to_le_bytes(), ("A0", 5, 5), ("A1", 5, 5), ("PC", start_PC, start_PC + 24));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_bgeu_lt() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(
+            0x00b57c63u32.to_le_bytes(),
+            ("A0", 10, 10),
+            ("A1", (-25i32) as u32, (-25i32) as u32), //Unsigned interpretation: [(-25i32) = 11100111u32] > 10
+            ("PC", start_PC, start_PC + 4)
+        );
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
     fn test_jal() {
         let start_PC = 16;
         let test_data = generate_test_data!(0x0100056fu32.to_le_bytes(), ("A0", 0x0, start_PC + 4), ("PC", start_PC, start_PC + 16));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    // Jump to an address formed by adding xs1 to a signed offset
+    // then clearing the least significant bit,
+    // and store the return address in xd.
+    #[test]
+    fn test_jalr() {
+        let offset: i32 = -25; // NOTE: this is included in the instruction bytes and is only
+                               // repeated here for clarity.
+                               // 25 is chosen on purpose as we throw away the least significant bit
+
+        let start_PC: i32 = 32;
+        let xs1: i32 = 8;
+        let address: i32 = ((xs1 + offset) & !1); // `!1` clears the least significant bit
+
+        let test_data = generate_test_data!(
+            0xfe758567u32.to_le_bytes(),
+            ("A0", 0x0, start_PC as u32 + 4),
+            ("A1", xs1 as u32, xs1 as u32),
+            ("PC", start_PC as u32, address as u32)
+        );
 
         let mut vm = setup_test_vm();
         let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
