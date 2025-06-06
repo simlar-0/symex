@@ -190,13 +190,13 @@ mod tests {
             operand2: Operand::Immediate(DataWord::Word32(mem_addr)),
         };
         let load_imm_in_temp = general_assembly::operation::Operation::Add {
-            destination: Operand::Local("TEMP".to_owned()),
+            destination: Operand::Register("TEMP".to_owned()),
             operand1: Operand::Register("ZERO".to_owned()),
             operand2: Operand::Immediate(DataWord::Word32(value)),
         };
         let save_into_mem = general_assembly::operation::Operation::Move {
             destination: Operand::AddressInLocal("ADDR".to_owned(), 32),
-            source: Operand::Local("TEMP".to_owned()),
+            source: Operand::Register("TEMP".to_owned()),
         };
 
         executor
@@ -217,8 +217,8 @@ mod tests {
             operand2: Operand::Immediate(DataWord::Word32(mem_addr)),
         };
         let read_from_mem_into_temp = general_assembly::operation::Operation::Move {
-            destination: Operand::Local("TEMP".to_owned()),
-            source: Operand::Local("ADDR".to_owned()),
+            destination: Operand::Register("TEMP".to_owned()),
+            source: Operand::AddressInLocal("ADDR".to_owned(), 32),
         };
 
         executor
@@ -400,9 +400,9 @@ mod tests {
 
     #[test]
     fn test_lb() {
-        let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 382), ("A1", 4, 4));
+        let test_data = generate_test_data!(0x00e58503u32.to_le_bytes(), ("A0", 0, 0xd), ("A1", 4, 4));
 
-        run_test_with_mem(&test_data, 18i32 as u32, 382, 382);
+        run_test_with_mem(&test_data, 18i32 as u32, 0xfe0d, 0xfe0d);
     }
 
     #[test]
