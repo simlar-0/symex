@@ -630,6 +630,27 @@ mod tests {
         assert_results(&test_data, &mut final_state);
     }
 
+    #[test]
+    fn test_lui() {
+        let test_data = generate_test_data!(0x03039537u32.to_le_bytes(), ("A0", 65829842, 12345 << 12));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
+    #[test]
+    fn test_auipc() {
+        let start_PC = 16;
+        let test_data = generate_test_data!(0x00018517u32.to_le_bytes(), ("A0", 64763252, start_PC + (24 << 12)), ("PC", start_PC, start_PC + 4));
+
+        let mut vm = setup_test_vm();
+        let mut final_state = run_test(&mut vm, test_data.instruction_bytes, &test_data).state;
+
+        assert_results(&test_data, &mut final_state);
+    }
+
     // Jump to an address formed by adding xs1 to a signed offset
     // then clearing the least significant bit,
     // and store the return address in xd.
