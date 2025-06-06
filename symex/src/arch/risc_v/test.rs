@@ -641,7 +641,7 @@ mod tests {
 
         let start_PC: i32 = 32;
         let xs1: i32 = 8;
-        let address: i32 = ((xs1 + offset) & !1); // `!1` clears the least significant bit
+        let address: i32 = ((xs1 + offset) & !1); // `& !1` clears the least significant bit
 
         let test_data = generate_test_data!(
             0xfe758567u32.to_le_bytes(),
