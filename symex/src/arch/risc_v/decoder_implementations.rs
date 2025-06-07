@@ -587,8 +587,8 @@ impl InstructionToGAOperations for parsed_instructions::jal {
             imm:u32;
 
             let target = pc + imm;
-            Jump(target);
             rd = pc + 4u32;
+            Jump(target);
         ])
     }
 }
@@ -607,8 +607,8 @@ impl InstructionToGAOperations for parsed_instructions::jalr {
 
             let target = rs1 + imm;
             target = target & least_bit_mask; // Clear the least significant bit
-            Jump(target);
             rd = pc + 4u32;
+            Jump(target);
         ])
     }
 }
