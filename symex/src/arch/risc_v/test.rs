@@ -267,8 +267,30 @@ mod tests {
     }
 
     #[test]
+    fn test_add_wrap() {
+        // RISCV ignores overflow and result is wrapped, from ISA: 
+        //"Arithmetic overflow is ignored and the result is simply the low XLEN bits of the result." 
+        let test_data = generate_test_data!(0x00B50533u32.to_le_bytes(), ("A0", 0xFFFFFFFFu32, 0x0u32), ("A1", 0x1u32, 0x1u32));
+        run_test_no_mem(&test_data);
+
+        let test_data = generate_test_data!(0x00B50533u32.to_le_bytes(), ("A0", 0x7FFFFFFFu32, 0x80000000u32), ("A1", 0x1u32, 0x1u32));
+        run_test_no_mem(&test_data);
+    }
+
+    #[test]
     fn test_sub() {
         let test_data = generate_test_data!(0x40B50533u32.to_le_bytes(), ("A0", 25, 0x06), ("A1", 19, 19));
+        run_test_no_mem(&test_data);
+    }
+
+    #[test]
+    fn test_sub_wrap() {
+        // RISCV ignores overflow and result is wrapped, from ISA: 
+        //"Arithmetic overflow is ignored and the result is simply the low XLEN bits of the result." 
+        let test_data = generate_test_data!(0x40B50533u32.to_le_bytes(), ("A0", 0x80000000u32, 0x7FFFFFFFu32), ("A1", 0x01u32, 0x01u32));
+        run_test_no_mem(&test_data);
+
+        let test_data = generate_test_data!(0x40B50533u32.to_le_bytes(), ("A0", 0x7FFFFFFFu32, 0x80000000u32), ("A1", 0xFFFFFFFFu32, 0xFFFFFFFFu32));
         run_test_no_mem(&test_data);
     }
 
@@ -315,6 +337,14 @@ mod tests {
     }
 
     #[test]
+    fn test_srl_shift_exceed_max_bits() {
+        // This checks that the shift amount does not exceed 5 bits
+        // 0xFFFFFFFF should be masked to 0x1F
+        let test_data = generate_test_data!(0x00B55533u32.to_le_bytes(), ("A0", 0x80000000u32, 0x1u32), ("A1", 0xFFFFFFFFu32, 0xFFFFFFFFu32));
+        run_test_no_mem(&test_data);
+    }
+
+    #[test]
     fn test_sra_leading_0() {
         let test_data = generate_test_data!(0x40B55533u32.to_le_bytes(), ("A0", 0b01111001, 0b00011110), ("A1", 0x02, 0x02));
         run_test_no_mem(&test_data);
@@ -329,6 +359,14 @@ mod tests {
     #[test]
     fn test_sll() {
         let test_data = generate_test_data!(0x00B51533u32.to_le_bytes(), ("A0", 0b01111001, 0x1e400000), ("A1", 22, 22));
+        run_test_no_mem(&test_data);
+    }
+
+    #[test]
+    fn test_sll_shift_exceeds_max_bits() {
+        // This checks that the shift amount does not exceed 5 bits
+        // 0xFFFFFFFF should be masked to 0x1F
+        let test_data = generate_test_data!(0x00B51533u32.to_le_bytes(), ("A0", 0x1u32, 0x80000000u32), ("A1", 0xFFFFFFFFu32, 0xFFFFFFFFu32));
         run_test_no_mem(&test_data);
     }
 
@@ -436,21 +474,21 @@ mod tests {
 
     #[test]
     fn test_lhu() {
-        let test_data = generate_test_data!(0x00e5d503u32.to_le_bytes(), ("A0", 0, 0xbeef as u32), ("A1", (-4i32 as u32), (-4i32 as u32)));
+        let test_data = generate_test_data!(0x00e5d503u32.to_le_bytes(), ("A0", 0, 0xbeef), ("A1", (-4i32 as u32), (-4i32 as u32)));
 
         run_test_with_mem(&test_data, 10i32 as u32, 0xdeadbeef, 0xdeadbeef);
     }
 
     #[test]
     fn test_sb() {
-        let test_data = generate_test_data!(0x00a58723u32.to_le_bytes(), ("A0", 0xef, 0xef), ("A1", (-4i32 as u32), (-4i32 as u32)));
+        let test_data = generate_test_data!(0x00a58723u32.to_le_bytes(), ("A0", 0xdeadbeef, 0xdeadbeef), ("A1", (-4i32 as u32), (-4i32 as u32)));
 
         run_test_with_mem(&test_data, 10i32 as u32, 0x0, 0xef);
     }
 
     #[test]
     fn test_sh() {
-        let test_data = generate_test_data!(0x00a59723u32.to_le_bytes(), ("A0", 0xbeef, 0xbeef), ("A1", (-4i32 as u32), (-4i32 as u32)));
+        let test_data = generate_test_data!(0x00a59723u32.to_le_bytes(), ("A0", 0xdeadbeef, 0xdeadbeef), ("A1", (-4i32 as u32), (-4i32 as u32)));
 
         run_test_with_mem(&test_data, 10i32 as u32, 0x0, 0xbeef);
     }
@@ -653,6 +691,12 @@ mod tests {
             ("A1", xs1 as u32, xs1 as u32),
             ("PC", start_PC as u32, address as u32)
         );
+        run_test_no_mem(&test_data);
+    }
+
+    #[test]
+    fn test_write_to_zero() {
+        let test_data = generate_test_data!(0x00B50533u32.to_le_bytes(), ("ZERO", 0x5u32, 0x0u32), ("A1", 0x1u32, 0x1u32));
         run_test_no_mem(&test_data);
     }
 }
