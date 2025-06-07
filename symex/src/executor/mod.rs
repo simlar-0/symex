@@ -1436,7 +1436,7 @@ impl<'vm, C: Composition> GAExecutor<'vm, C> {
                     Comparison::Eq => lhs._eq(&rhs),
                     Comparison::UGt => lhs.ugt(&rhs),
                     Comparison::ULt => lhs.ult(&rhs),
-                    Comparison::UGeq => lhs.ugt(&rhs),
+                    Comparison::UGeq => lhs.ugte(&rhs),
                     Comparison::ULeq => lhs.ulte(&rhs),
                     Comparison::SGt => lhs.sgt(&rhs),
                     Comparison::SLt => lhs.slt(&rhs),
